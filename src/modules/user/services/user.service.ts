@@ -19,46 +19,83 @@ export class UserService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserDocument> {
-    // 检查用户名是否存在
-    const existingUsername = await this.userModel.findOne({ username: createUserDto.username })
+    const existingUsername = await this.userModel.findOne({
+      username: createUserDto.username,
+    })
     if (existingUsername) {
       throw new ConflictException('用户名已被使用')
     }
 
-    // 检查邮箱是否存在
-    const existingEmail = await this.userModel.findOne({ email: createUserDto.email })
+    const existingEmail = await this.userModel.findOne({
+      email: createUserDto.email,
+    })
     if (existingEmail) {
       throw new ConflictException('邮箱已被注册')
     }
 
-    // 创建新用户
     const createdUser = new this.userModel(createUserDto)
     return createdUser.save()
   }
 
-  async login(loginUserDto: LoginUserDto): Promise<{ access_token: string; user: UserDocument }> {
+  async login(
+    loginUserDto: LoginUserDto,
+    userAgent?: string,
+  ): Promise<{
+    hikariAccessToken: string
+    hikariRefreshToken: string
+    user: { name: string; userId: string }
+  }> {
     const { identifier, password } = loginUserDto
 
-    // 查找用户（通过用户名或邮箱）
     const user = await this.userModel.findOne({
-      $or: [{ username: identifier }, { email: identifier }],
+      $or: [{ name: identifier }, { email: identifier }],
     })
 
     if (!user) {
       throw new NotFoundException('用户不存在')
     }
 
-    // 验证密码
     const isPasswordValid = await user.comparePassword(password)
     if (!isPasswordValid) {
       throw new UnauthorizedException('密码错误')
     }
 
-    // 生成JWT
-    const payload = { sub: user._id, username: user.username, role: user.role }
+    const hikari_access_token_payload = {
+      _id: user._id,
+      userId: user.userId,
+      name: user.name,
+      email: user.email,
+      hikariUserGroup: user.hikariUserGroup,
+    }
+    const hikari_access_token = this.jwtService.sign(hikari_access_token_payload, {
+      expiresIn: '1h',
+      secret: process.env.JWT_SECRET,
+    })
+
+    const hikari_refresh_token_payload = {
+      userId: user.userId,
+    }
+    const hikari_refresh_token = this.jwtService.sign(hikari_refresh_token_payload, {
+      expiresIn: '7d',
+      secret: process.env.JWT_REFRESH_SECRET,
+    })
+
+    // 保存 refresh token
+    user.hikariRefreshToken.push({
+      token: hikari_refresh_token,
+      deviceInfo: userAgent || 'Unknown',
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    })
+    await user.save()
+
     return {
-      access_token: this.jwtService.sign(payload),
-      user,
+      hikariAccessToken: hikari_access_token,
+      hikariRefreshToken: hikari_refresh_token,
+      user: {
+        name: user.name,
+        userId: user.userId,
+      },
     }
   }
 
@@ -71,7 +108,7 @@ export class UserService {
   }
 
   async findByUsername(username: string): Promise<UserDocument> {
-    const user = await this.userModel.findOne({ username })
+    const user = await this.userModel.findOne({ name: username })
     if (!user) {
       throw new NotFoundException('用户不存在')
     }

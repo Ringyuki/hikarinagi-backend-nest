@@ -17,7 +17,7 @@ import { UserSearchController } from './controllers/user-search.controller'
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('jwt.secret'),
         signOptions: {
-          expiresIn: configService.get<string>('jwt.expiresIn'),
+          expiresIn: configService.get<string>('jwt.hikariAccessTokenExpiresIn'),
         },
       }),
     }),

@@ -15,7 +15,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>()
-    const token = this.extractTokenFromHeader(request)
+    const token = this.extractTokenFromHeader(request) || this.extractTokenFromCookie(request)
 
     if (!token) {
       throw new UnauthorizedException('身份验证失败: 未提供访问令牌')
@@ -38,5 +38,14 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? []
     return type === 'Bearer' ? token : undefined
+  }
+
+  private extractTokenFromCookie(request: Request): string | undefined {
+    if (request.cookies) {
+      if (request.cookies['hikari_access_token']) {
+        return request.cookies['hikari_access_token']
+      }
+    }
+    return undefined
   }
 }

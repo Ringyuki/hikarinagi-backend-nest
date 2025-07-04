@@ -13,7 +13,7 @@ export class UserSearchController {
     const paginatedUsers = await this.userSearchService.findAll(page, limit)
     return {
       data: paginatedUsers,
-      message: '用户列表获取成功',
+      // message: '用户列表获取成功',
     }
   }
 

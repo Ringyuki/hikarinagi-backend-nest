@@ -1,18 +1,8 @@
 export default () => ({
   port: parseInt(process.env.PORT || '3005', 10),
-  database: {
-    uri: process.env.MONGO_URI,
-  },
-  jwt: {
-    secret: process.env.JWT_SECRET,
-    refreshSecret: process.env.JWT_REFRESH_SECRET,
-    hikariAccessTokenExpiresIn: process.env.HIKARI_ACCESS_TOKEN_EXPIRES_IN || '1h',
-    hikariRefreshTokenExpiresIn: process.env.HIKARI_REFRESH_TOKEN_EXPIRES_IN || '7d',
-  },
-  redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379', 10),
-    password: process.env.REDIS_PASSWORD || '',
+  throttle: {
+    ttl: parseInt(process.env.THROTTLE_TTL || '60', 10),
+    limit: parseInt(process.env.THROTTLE_LIMIT || '10', 10),
   },
   email: {
     elasticEmailApiKey: process.env.ELASTIC_EMAIL_API_KEY,

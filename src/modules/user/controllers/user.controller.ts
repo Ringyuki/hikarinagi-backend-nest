@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, UseGuards, Request } from '@nestjs/common'
+import { Controller, Post, Body, Get, Param, UseGuards, Request, Headers } from '@nestjs/common'
 import { UserService } from '../services/user.service'
 import { CreateUserDto } from '../dto/create-user.dto'
 import { LoginUserDto } from '../dto/login-user.dto'
@@ -19,8 +19,8 @@ export class UserController {
   }
 
   @Post('login')
-  async login(@Body() loginUserDto: LoginUserDto) {
-    const result = await this.userService.login(loginUserDto)
+  async login(@Body() loginUserDto: LoginUserDto, @Headers('user-agent') userAgent: string) {
+    const result = await this.userService.login(loginUserDto, userAgent)
     return {
       data: result,
       message: '登录成功',

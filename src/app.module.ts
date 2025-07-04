@@ -2,19 +2,20 @@ import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { MongooseModule } from '@nestjs/mongoose'
 import { CacheModule } from '@nestjs/cache-manager'
-import { ThrottlerModule } from '@nestjs/throttler'
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { redisStore } from 'cache-manager-redis-yet'
-import configuration from './common/config/configuration'
+import config from './common/config'
 import { UserModule } from './modules/user/user.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { RootAppModule } from './common/modules/app.module'
+import { APP_GUARD } from '@nestjs/core'
 
 @Module({
   imports: [
     // 配置模块
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration],
+      load: config,
     }),
 
     // 数据库模块
@@ -62,6 +63,11 @@ import { RootAppModule } from './common/modules/app.module'
     UserModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

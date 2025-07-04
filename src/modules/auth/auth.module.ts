@@ -14,7 +14,9 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard'
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('jwt.secret'),
-        signOptions: { expiresIn: configService.get<string>('jwt.expiresIn') },
+        signOptions: {
+          expiresIn: configService.get<string>('jwt.hikariAccessTokenExpiresIn'),
+        },
       }),
     }),
     UserModule,

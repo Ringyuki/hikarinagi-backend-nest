@@ -36,7 +36,7 @@ export default [
           semi: false,
           bracketSpacing: true,
           arrowParens: 'avoid',
-          endOfLine: 'lf',
+          endOfLine: 'auto',
         },
       ],
     },

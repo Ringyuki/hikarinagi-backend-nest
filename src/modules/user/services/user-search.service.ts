@@ -17,7 +17,7 @@ export class UserSearchService {
         .find(query)
         .skip(skip)
         .limit(limit)
-        .select('userId name avatar hikariUserGroup bio createdAt headCover signature status')
+        .select('userId name avatar hikariUserGroup bio createdAt headCover signature status -_id')
         .exec(),
       this.userModel.countDocuments(query).exec(),
     ])
@@ -40,7 +40,7 @@ export class UserSearchService {
   async searchUsers(keyword: string, page = 1, limit = 10): Promise<PaginatedResult<UserDocument>> {
     const query = {
       $or: [
-        { username: { $regex: keyword, $options: 'i' } },
+        { name: { $regex: keyword, $options: 'i' } },
         { email: { $regex: keyword, $options: 'i' } },
       ],
     }
