@@ -4,14 +4,18 @@ import { ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { TransformInterceptor } from './common/interceptors/transform.interceptor'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
+import * as cookieParser from 'cookie-parser'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
   const configService = app.get(ConfigService)
 
+  // Cookie 解析器
+  app.use(cookieParser())
+
   // 全局前缀
   app.setGlobalPrefix('api', {
-    exclude: ['', 'health'],
+    exclude: [''],
   })
   // 全局管道
   app.useGlobalPipes(

@@ -15,13 +15,4 @@ export class AppController {
       timestamp: new Date().toISOString(),
     }
   }
-
-  @Get('health')
-  healthCheck() {
-    return {
-      status: 'ok',
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-    }
-  }
 }
