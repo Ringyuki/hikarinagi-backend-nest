@@ -5,6 +5,7 @@ import { CacheModule } from '@nestjs/cache-manager'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { redisStore } from 'cache-manager-redis-yet'
 import config from './common/config'
+import { HikariConfigModule } from './common/config/config.module'
 import { UserModule } from './modules/user/user.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { RootAppModule } from './common/modules/app.module'
@@ -17,6 +18,7 @@ import { APP_GUARD } from '@nestjs/core'
       isGlobal: true,
       load: config,
     }),
+    HikariConfigModule,
 
     // 数据库模块
     MongooseModule.forRootAsync({

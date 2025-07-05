@@ -10,12 +10,15 @@ import { JwtService } from '@nestjs/jwt'
 import { User, UserDocument } from '../schemas/user.schema'
 import { CreateUserDto } from '../dto/create-user.dto'
 import { LoginUserDto } from '../dto/login-user.dto'
+import { RefreshTokenDto } from '../dto/refresh-token.dto'
+import { HikariConfigService } from '../../../common/config'
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
+    private configService: HikariConfigService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserDocument> {
@@ -68,16 +71,16 @@ export class UserService {
       hikariUserGroup: user.hikariUserGroup,
     }
     const hikari_access_token = this.jwtService.sign(hikari_access_token_payload, {
-      expiresIn: '1h',
-      secret: process.env.JWT_SECRET,
+      expiresIn: this.configService.get('jwt.hikariAccessTokenExpiresIn'),
+      secret: this.configService.get('jwt.secret'),
     })
 
     const hikari_refresh_token_payload = {
       userId: user.userId,
     }
     const hikari_refresh_token = this.jwtService.sign(hikari_refresh_token_payload, {
-      expiresIn: '7d',
-      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: this.configService.get('jwt.hikariRefreshTokenExpiresIn'),
+      secret: this.configService.get('jwt.secret'),
     })
 
     // 保存 refresh token
@@ -97,6 +100,63 @@ export class UserService {
         userId: user.userId,
       },
     }
+  }
+
+  async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<{
+    hikariAccessToken: string
+  }> {
+    let decoded = null
+    try {
+      decoded = this.jwtService.verify(refreshTokenDto.refreshToken, {
+        secret: this.configService.get('jwt.refreshSecret'),
+      })
+    } catch {
+      throw new UnauthorizedException('无效的 refreshToken')
+    }
+    const user = await this.userModel.findOne({ userId: decoded.userId })
+    if (!user) {
+      throw new UnauthorizedException('用户不存在')
+    }
+
+    const tokenIndex = user.hikariRefreshToken.findIndex(
+      token => token.token === refreshTokenDto.refreshToken,
+    )
+    if (tokenIndex === -1) {
+      throw new UnauthorizedException('无效的 refreshToken')
+    }
+
+    const hikariAccessTokenPayload = {
+      _id: user._id,
+      userId: user.userId,
+      name: user.name,
+      email: user.email,
+      hikariUserGroup: user.hikariUserGroup,
+    }
+    const hikariAccessToken = this.jwtService.sign(hikariAccessTokenPayload, {
+      expiresIn: this.configService.get('jwt.hikariAccessTokenExpiresIn'),
+      secret: this.configService.get('jwt.secret'),
+    })
+
+    return {
+      hikariAccessToken,
+    }
+  }
+
+  async logout(hikariRefreshToken: string, userId: string): Promise<void> {
+    const user = await this.userModel.findOne({ userId })
+    if (!user) {
+      throw new UnauthorizedException('用户不存在')
+    }
+
+    const tokenIndex = user.hikariRefreshToken.findIndex(
+      token => token.token === hikariRefreshToken,
+    )
+    if (tokenIndex === -1) {
+      throw new UnauthorizedException('无效的 refreshToken')
+    }
+
+    user.hikariRefreshToken.splice(tokenIndex, 1)
+    await user.save()
   }
 
   async findById(id: string): Promise<UserDocument> {
