@@ -1,4 +1,5 @@
-import { Injectable, Inject, Logger } from '@nestjs/common'
+import { Injectable, Inject, Logger, BadRequestException } from '@nestjs/common'
+import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
 import { v4 as uuidv4 } from 'uuid'
@@ -14,12 +15,17 @@ export class VerificationService {
   ) {}
 
   async requestVerificationCode(
+    req: RequestWithUser,
     email: string,
     type: string,
   ): Promise<{
     success: boolean
     uuid: string
   }> {
+    if (type !== 'register' && type !== 'email-change' && req.user.email !== email) {
+      throw new BadRequestException('邮箱不匹配')
+    }
+
     const code = this.generateVerificationCode()
     const uuid = uuidv4()
     const expirationTime = 60 * 10 // 10 minutes
@@ -33,10 +39,7 @@ export class VerificationService {
     }
 
     try {
-      // 存储到Redis
       await this.cacheManager.set(key, JSON.stringify(value), expirationTime * 1000)
-
-      // 发送邮件
       await this.emailService.sendVerificationCode(email, code)
 
       return {
@@ -75,7 +78,6 @@ export class VerificationService {
         }
       }
 
-      // 删除已使用的验证码
       await this.cacheManager.del(key)
 
       return {

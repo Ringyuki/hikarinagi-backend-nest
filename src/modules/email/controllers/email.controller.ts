@@ -1,4 +1,5 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common'
+import { Controller, Post, Body, UseGuards, HttpCode, HttpStatus, Req } from '@nestjs/common'
+import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
 import { ThrottlerGuard } from '@nestjs/throttler'
 import { EmailService } from '../services/email.service'
 import { VerificationService } from '../services/verification.service'
@@ -18,6 +19,7 @@ export class EmailController {
   ) {}
 
   @Post('send')
+  @HttpCode(HttpStatus.OK)
   @Roles(HikariUserGroup.ADMIN)
   async sendEmail(@Body() sendEmailDto: SendEmailDto) {
     await this.emailService.sendEmail(sendEmailDto)
@@ -27,8 +29,13 @@ export class EmailController {
   }
 
   @Post('verification-code/request')
-  async requestVerificationCode(@Body() requestDto: RequestVerificationCodeDto) {
+  @HttpCode(HttpStatus.OK)
+  async requestVerificationCode(
+    @Req() req: RequestWithUser,
+    @Body() requestDto: RequestVerificationCodeDto,
+  ) {
     const result = await this.verificationService.requestVerificationCode(
+      req,
       requestDto.email,
       requestDto.type,
     )
@@ -43,6 +50,7 @@ export class EmailController {
   }
 
   @Post('verification-code/verify')
+  @HttpCode(HttpStatus.OK)
   async verifyCode(@Body() verificationDto: VerificationCodeDto) {
     const result = await this.verificationService.verifyCode(verificationDto)
     return {
@@ -50,7 +58,7 @@ export class EmailController {
         verified: result.verified,
         email: verificationDto.email,
       },
-      message: result.verified ? '验证码验证成功' : '验证码验证失败',
+      message: result.verified ? '验证码验证成功' : result.message,
     }
   }
 }
