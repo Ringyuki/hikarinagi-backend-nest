@@ -6,6 +6,9 @@ export default () => ({
   },
   email: {
     elasticEmailApiKey: process.env.ELASTIC_EMAIL_API_KEY,
+    elasticEmailEndPoint: process.env.ELASTIC_EMAIL_ENDPOINT,
+    emailSenderAddress: process.env.EMAIL_SENDER_ADDRESS,
+    emailSenderName: process.env.EMAIL_SENDER_NAME,
   },
   reader: {
     readerSignatureSecret: process.env.READER_SIGNATURE_SECRET,

@@ -3,6 +3,7 @@ import { Document } from 'mongoose'
 import * as bcrypt from 'bcrypt'
 import mongoose from 'mongoose'
 import { v4 as uuidv4 } from 'uuid'
+import { UserToObjectOptions } from '../../../types/mongoose-extensions'
 
 export type UserDocument = User &
   Document & {
@@ -12,27 +13,63 @@ export type UserDocument = User &
 @Schema({
   timestamps: true,
   toJSON: {
-    transform: (_, ret) => {
+    transform: (_, ret, options: UserToObjectOptions) => {
+      if (!options.includeEmail) {
+        delete ret.email
+      }
+      if (options.includeStatus) {
+        ret.followersCount = ret.followers.length
+        ret.followingCount = ret.following.length
+      }
+      if (!options.include_id) {
+        delete ret._id
+      }
       delete ret.password
+      delete ret.isVerified
+      delete ret.createdAt
+      delete ret.updatedAt
+      delete ret.hikariRefreshToken
+      delete ret.followers
+      delete ret.following
       delete ret.__v
+      delete ret.uuid
       return ret
     },
   },
 })
 export class User {
-  @Prop({ required: true, unique: true })
+  @Prop({
+    required: function () {
+      return this.uuid
+    },
+    unique: true,
+  })
   userId: string
 
-  @Prop({ required: true, unique: true })
+  @Prop({
+    required: function () {
+      return this.userId
+    },
+    unique: true,
+  })
   uuid: string
 
-  @Prop({ required: true, unique: true })
+  @Prop({
+    required: function () {
+      return this.name
+    },
+    unique: true,
+  })
   name: string
 
   @Prop({ required: true, unique: true })
   email: string
 
-  @Prop({ required: true })
+  @Prop({
+    required: function () {
+      return this.password
+    },
+  })
   password: string
 
   @Prop({ default: false })
@@ -67,18 +104,19 @@ export class User {
   @Prop({ default: [], ref: 'User' })
   following?: mongoose.Types.ObjectId[]
 
+  @Prop({ ref: 'UserSetting' })
+  setting: mongoose.Types.ObjectId
+
   @Prop({ default: 'active', enum: ['active', 'inactive', 'banned'] })
   status: string
 }
 
 export const UserSchema = SchemaFactory.createForClass(User)
 
-// 添加 comparePassword 方法到 schema
 UserSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
   return bcrypt.compare(password, this.password)
 }
 
-// 添加中间件以在保存前哈希密码
 UserSchema.pre('save', async function (next) {
   // 如果用户是新用户，则生成 uuid
   if (!this.uuid) {

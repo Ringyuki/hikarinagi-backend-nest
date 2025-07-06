@@ -1,8 +1,8 @@
 import { Controller, Post, Body, Get, Param, UseGuards, Request, Headers } from '@nestjs/common'
 import { UserService } from '../services/user.service'
-import { CreateUserDto } from '../dto/create-user.dto'
-import { LoginUserDto } from '../dto/login-user.dto'
-import { RefreshTokenDto } from '../dto/refresh-token.dto'
+import { CreateUserDto } from '../dto/user/create-user.dto'
+import { LoginUserDto } from '../dto/user/login-user.dto'
+import { RefreshTokenDto } from '../dto/user/refresh-token.dto'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../../auth/guards/roles.guard'
 import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
@@ -57,12 +57,12 @@ export class UserController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':username')
   async findByUsername(@Param('username') username: string) {
     const user = await this.userService.findByUsername(username)
     return {
       data: user,
-      message: '获取用户信息成功',
     }
   }
 }

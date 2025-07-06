@@ -1,13 +1,16 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
+import { JwtModule } from '@nestjs/jwt'
 import { MongooseModule } from '@nestjs/mongoose'
 import { CacheModule } from '@nestjs/cache-manager'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { redisStore } from 'cache-manager-redis-yet'
 import config from './common/config'
 import { HikariConfigModule } from './common/config/config.module'
+import { HikariConfigService } from './common/config'
 import { UserModule } from './modules/user/user.module'
 import { AuthModule } from './modules/auth/auth.module'
+import { EmailModule } from './modules/email/email.module'
 import { RootAppModule } from './common/modules/app.module'
 import { APP_GUARD } from '@nestjs/core'
 
@@ -19,6 +22,17 @@ import { APP_GUARD } from '@nestjs/core'
       load: config,
     }),
     HikariConfigModule,
+    JwtModule.registerAsync({
+      global: true,
+      imports: [ConfigModule],
+      inject: [HikariConfigService],
+      useFactory: (configService: HikariConfigService) => ({
+        secret: configService.get('jwt.secret'),
+        signOptions: {
+          expiresIn: configService.get('jwt.hikariAccessTokenExpiresIn'),
+        },
+      }),
+    }),
 
     // 数据库模块
     MongooseModule.forRootAsync({
@@ -63,6 +77,7 @@ import { APP_GUARD } from '@nestjs/core'
     RootAppModule,
     AuthModule,
     UserModule,
+    EmailModule,
   ],
   controllers: [],
   providers: [

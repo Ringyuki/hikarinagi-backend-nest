@@ -6,17 +6,20 @@ import {
 } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
+import * as mongoose from 'mongoose'
 import { JwtService } from '@nestjs/jwt'
 import { User, UserDocument } from '../schemas/user.schema'
-import { CreateUserDto } from '../dto/create-user.dto'
-import { LoginUserDto } from '../dto/login-user.dto'
-import { RefreshTokenDto } from '../dto/refresh-token.dto'
+import { UserSetting, UserSettingDocument } from '../schemas/user-setting.schema'
+import { CreateUserDto } from '../dto/user/create-user.dto'
+import { LoginUserDto } from '../dto/user/login-user.dto'
+import { RefreshTokenDto } from '../dto/user/refresh-token.dto'
 import { HikariConfigService } from '../../../common/config'
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(UserSetting.name) private userSettingModel: Model<UserSettingDocument>,
     private jwtService: JwtService,
     private configService: HikariConfigService,
   ) {}
@@ -37,6 +40,14 @@ export class UserService {
     }
 
     const createdUser = new this.userModel(createUserDto)
+
+    // 初始化user setting
+    const userSetting = new this.userSettingModel({
+      user: createdUser._id,
+    })
+    const savedUserSetting = await userSetting.save()
+    createdUser.setting = savedUserSetting._id as mongoose.Types.ObjectId
+
     return createdUser.save()
   }
 
@@ -58,6 +69,8 @@ export class UserService {
       throw new NotFoundException('用户不存在')
     }
 
+    const userSetting = await this.userSettingModel.findOne({ user: user._id })
+
     const isPasswordValid = await user.comparePassword(password)
     if (!isPasswordValid) {
       throw new UnauthorizedException('密码错误')
@@ -69,6 +82,7 @@ export class UserService {
       name: user.name,
       email: user.email,
       hikariUserGroup: user.hikariUserGroup,
+      userSetting,
     }
     const hikari_access_token = this.jwtService.sign(hikari_access_token_payload, {
       expiresIn: this.configService.get('jwt.hikariAccessTokenExpiresIn'),
@@ -80,7 +94,7 @@ export class UserService {
     }
     const hikari_refresh_token = this.jwtService.sign(hikari_refresh_token_payload, {
       expiresIn: this.configService.get('jwt.hikariRefreshTokenExpiresIn'),
-      secret: this.configService.get('jwt.secret'),
+      secret: this.configService.get('jwt.refreshSecret'),
     })
 
     // 保存 refresh token
@@ -172,7 +186,7 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('用户不存在')
     }
-    return user
+    return user.toJSON({ includeEmail: true, includeStatus: true, include_id: false })
   }
 
   async findByEmail(email: string): Promise<UserDocument> {
