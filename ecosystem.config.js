@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'hikarinagi-backend-nestjs',
       script: 'pnpm',
-      args: 'start',
+      args: 'start:prod',
       instances: 1,
       autorestart: true,
       watch: false,
