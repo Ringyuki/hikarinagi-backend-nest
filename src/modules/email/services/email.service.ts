@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import axios from 'axios'
 import { SendEmailDto } from '../dto/send-email.dto'
 import { EmailConfig } from '../interfaces/email.interface'
-import { HikariConfigService } from '../../../common/config'
+import { HikariConfigService } from '../../../common/config/configs'
 
 @Injectable()
 export class EmailService {

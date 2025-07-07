@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { ConfigPath, ConfigPathValue } from './config.types'
+import { ConfigPath, ConfigPathValue } from '../types/config.types'
 
 @Injectable()
 export class HikariConfigService {

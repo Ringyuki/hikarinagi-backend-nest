@@ -15,9 +15,9 @@ export class VerificationService {
   ) {}
 
   async requestVerificationCode(
-    req: RequestWithUser,
     email: string,
     type: string,
+    req?: RequestWithUser,
   ): Promise<{
     success: boolean
     uuid: string

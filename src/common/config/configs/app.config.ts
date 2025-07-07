@@ -10,6 +10,7 @@ export default () => ({
     emailSenderAddress: process.env.EMAIL_SENDER_ADDRESS,
     emailSenderName: process.env.EMAIL_SENDER_NAME,
   },
+  allowRegister: process.env.ALLOW_REGISTER === 'true',
   reader: {
     readerSignatureSecret: process.env.READER_SIGNATURE_SECRET,
   },

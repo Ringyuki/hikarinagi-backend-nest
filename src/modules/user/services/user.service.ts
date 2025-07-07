@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
@@ -10,10 +11,10 @@ import * as mongoose from 'mongoose'
 import { JwtService } from '@nestjs/jwt'
 import { User, UserDocument } from '../schemas/user.schema'
 import { UserSetting, UserSettingDocument } from '../schemas/user-setting.schema'
-import { CreateUserDto } from '../dto/user/create-user.dto'
-import { LoginUserDto } from '../dto/user/login-user.dto'
-import { RefreshTokenDto } from '../dto/user/refresh-token.dto'
-import { HikariConfigService } from '../../../common/config'
+import { VerificationForSignupDto, CreateUserDto, LoginUserDto, RefreshTokenDto } from '../dto/user'
+import { HikariConfigService } from '../../../common/config/configs'
+import { VerificationService } from '../../email/services/verification.service'
+import { CounterService } from '../../shared/services/counter.service'
 
 @Injectable()
 export class UserService {
@@ -22,33 +23,110 @@ export class UserService {
     @InjectModel(UserSetting.name) private userSettingModel: Model<UserSettingDocument>,
     private jwtService: JwtService,
     private configService: HikariConfigService,
+    private verificationService: VerificationService,
+    private counterService: CounterService,
   ) {}
-
-  async create(createUserDto: CreateUserDto): Promise<UserDocument> {
-    const existingUsername = await this.userModel.findOne({
-      username: createUserDto.username,
-    })
-    if (existingUsername) {
-      throw new ConflictException('用户名已被使用')
+  async sendVerificationEmailForSignUp(verificationForSignupDto: VerificationForSignupDto) {
+    if (!this.configService.get('allowRegister')) {
+      throw new ForbiddenException('注册已关闭')
     }
 
+    const existingName = await this.userModel.findOne({
+      name: verificationForSignupDto.name,
+      isVerified: true,
+    })
+    if (existingName) {
+      throw new ConflictException('用户名已被使用')
+    }
+    const existingEmail = await this.userModel.findOne({
+      email: verificationForSignupDto.email,
+      isVerified: true,
+    })
+    if (existingEmail) {
+      throw new ConflictException('邮箱已被注册')
+    }
+    const exsitedUnVerifiedUser = await this.userModel.findOne({
+      email: verificationForSignupDto.email,
+      isVerified: false,
+    })
+    if (!exsitedUnVerifiedUser) {
+      await this.userModel.create({
+        email: verificationForSignupDto.email,
+        isVerified: false,
+      })
+    }
+
+    const result = await this.verificationService.requestVerificationCode(
+      verificationForSignupDto.email,
+      'register',
+    )
+    return {
+      uuid: result.uuid,
+      email: verificationForSignupDto.email,
+      type: 'register',
+    }
+  }
+
+  async create(createUserDto: CreateUserDto): Promise<UserDocument> {
+    if (!this.configService.get('allowRegister')) {
+      throw new ForbiddenException('注册已关闭')
+    }
+
+    const existingName = await this.userModel.findOne({
+      name: createUserDto.name,
+      isVerified: true,
+    })
+    if (existingName) {
+      throw new ConflictException('用户名已被使用')
+    }
     const existingEmail = await this.userModel.findOne({
       email: createUserDto.email,
+      isVerified: true,
     })
     if (existingEmail) {
       throw new ConflictException('邮箱已被注册')
     }
 
-    const createdUser = new this.userModel(createUserDto)
-
-    // 初始化user setting
-    const userSetting = new this.userSettingModel({
-      user: createdUser._id,
+    const result = await this.verificationService.verifyCode({
+      email: createUserDto.email,
+      code: createUserDto.code,
+      uuid: createUserDto.uuid,
     })
-    const savedUserSetting = await userSetting.save()
-    createdUser.setting = savedUserSetting._id as mongoose.Types.ObjectId
+    if (!result.verified) {
+      throw new UnauthorizedException(result.message)
+    }
 
-    return createdUser.save()
+    const existingUnVerifiedUser = await this.userModel.findOne({
+      email: createUserDto.email,
+      isVerified: false,
+    })
+    if (!existingUnVerifiedUser) {
+      const createdUser = new this.userModel({
+        ...createUserDto,
+        userId: (await this.counterService.getNextSequence('userId')).toString(),
+        isVerified: true,
+      })
+      const savedUser = await createdUser.save()
+      const userSetting = new this.userSettingModel({
+        user: savedUser._id,
+      })
+      const savedUserSetting = await userSetting.save()
+      savedUser.setting = savedUserSetting._id as mongoose.Types.ObjectId
+      return savedUser.toJSON({ includeEmail: true, includeStatus: false, include_id: false })
+    } else {
+      existingUnVerifiedUser.password = createUserDto.password
+      existingUnVerifiedUser.name = createUserDto.name
+      existingUnVerifiedUser.userId = (
+        await this.counterService.getNextSequence('userId')
+      ).toString()
+      existingUnVerifiedUser.isVerified = true
+      await existingUnVerifiedUser.save()
+      return existingUnVerifiedUser.toJSON({
+        includeEmail: true,
+        includeStatus: false,
+        include_id: false,
+      })
+    }
   }
 
   async login(

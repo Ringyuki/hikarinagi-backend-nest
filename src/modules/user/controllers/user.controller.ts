@@ -1,8 +1,6 @@
 import { Controller, Post, Body, Get, Param, UseGuards, Request, Headers } from '@nestjs/common'
 import { UserService } from '../services/user.service'
-import { CreateUserDto } from '../dto/user/create-user.dto'
-import { LoginUserDto } from '../dto/user/login-user.dto'
-import { RefreshTokenDto } from '../dto/user/refresh-token.dto'
+import { VerificationForSignupDto, CreateUserDto, LoginUserDto, RefreshTokenDto } from '../dto/user'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../../auth/guards/roles.guard'
 import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
@@ -12,6 +10,15 @@ import { Roles } from '../../auth/decorators/roles.decorator'
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @Post('verification-for-signup')
+  async verificationForSignup(@Body() verificationForSignupDto: VerificationForSignupDto) {
+    const result = await this.userService.sendVerificationEmailForSignUp(verificationForSignupDto)
+    return {
+      data: result,
+      message: 'verification email sent',
+    }
+  }
 
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
@@ -58,6 +65,7 @@ export class UserController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Roles(HikariUserGroup.ADMIN)
   @Get(':username')
   async findByUsername(@Param('username') username: string) {
     const user = await this.userService.findByUsername(username)

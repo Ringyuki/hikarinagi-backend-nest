@@ -5,7 +5,7 @@ import { PassportModule } from '@nestjs/passport'
 import { UserModule } from '../user/user.module'
 import { JwtStrategy } from '../../common/strategies/jwt.strategy'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
-import { HikariConfigService } from '../../common/config'
+import { HikariConfigService } from '../../common/config/configs'
 
 @Module({
   imports: [

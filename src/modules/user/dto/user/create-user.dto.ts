@@ -1,10 +1,18 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, Matches } from 'class-validator'
+import { IsEmail, IsNotEmpty, IsString, MinLength, Matches, IsUUID } from 'class-validator'
 
 export class CreateUserDto {
+  @IsNotEmpty({ message: '验证码不能为空' })
+  @IsString({ message: '验证码必须是字符串' })
+  code: string
+
+  @IsNotEmpty({ message: 'uuid不能为空' })
+  @IsUUID(4, { message: '需要提供有效的uuid' })
+  uuid: string
+
   @IsNotEmpty({ message: '用户名不能为空' })
   @IsString({ message: '用户名必须是字符串' })
   @MinLength(3, { message: '用户名长度不能少于3个字符' })
-  username: string
+  name: string
 
   @IsNotEmpty({ message: '邮箱不能为空' })
   @IsEmail({}, { message: '请提供有效的邮箱地址' })

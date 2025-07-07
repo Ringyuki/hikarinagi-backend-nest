@@ -5,12 +5,13 @@ import { MongooseModule } from '@nestjs/mongoose'
 import { CacheModule } from '@nestjs/cache-manager'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { redisStore } from 'cache-manager-redis-yet'
-import config from './common/config'
+import config from './common/config/configs'
 import { HikariConfigModule } from './common/config/config.module'
-import { HikariConfigService } from './common/config'
+import { HikariConfigService } from './common/config/configs'
 import { UserModule } from './modules/user/user.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { EmailModule } from './modules/email/email.module'
+import { SharedModule } from './modules/shared/shared.module'
 import { RootAppModule } from './common/modules/app.module'
 import { APP_GUARD } from '@nestjs/core'
 
@@ -72,6 +73,9 @@ import { APP_GUARD } from '@nestjs/core'
         limit: 10,
       },
     ]),
+
+    // 共享模块
+    SharedModule,
 
     // 应用模块
     RootAppModule,

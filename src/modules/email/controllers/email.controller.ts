@@ -35,9 +35,9 @@ export class EmailController {
     @Body() requestDto: RequestVerificationCodeDto,
   ) {
     const result = await this.verificationService.requestVerificationCode(
-      req,
       requestDto.email,
       requestDto.type,
+      req,
     )
     return {
       data: {

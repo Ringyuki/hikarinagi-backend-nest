@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { HikariConfigService } from './config.service'
+import { HikariConfigService } from './services/config.service'
 
 @Global()
 @Module({

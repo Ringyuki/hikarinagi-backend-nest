@@ -4,5 +4,5 @@ import appConfig from './app.config'
 
 export default [authConfig, databaseConfig, appConfig]
 
-export * from './config.types'
-export * from './config.service'
+export * from '../types/config.types'
+export * from '../services/config.service'

@@ -30,6 +30,7 @@ export interface AppConfig {
     emailSenderAddress?: string
     emailSenderName?: string
   }
+  allowRegister: boolean
   reader: {
     readerSignatureSecret?: string
   }
@@ -80,6 +81,8 @@ export type ConfigPath =
   | 'email.elasticEmailEndPoint'
   | 'email.emailSenderAddress'
   | 'email.emailSenderName'
+  // 注册配置
+  | 'allowRegister'
   // 阅读器配置
   | 'reader.readerSignatureSecret'
   // 下载配置
@@ -127,26 +130,28 @@ export type ConfigPathValue<T extends ConfigPath> = T extends 'jwt.secret'
                             ? string | undefined
                             : T extends 'email.emailSenderName'
                               ? string | undefined
-                              : T extends 'reader.readerSignatureSecret'
-                                ? string | undefined
-                                : T extends 'galDownload.downloadSignatureSecret'
+                              : T extends 'allowRegister'
+                                ? boolean
+                                : T extends 'reader.readerSignatureSecret'
                                   ? string | undefined
-                                  : T extends 'r2.r2Endpoint'
+                                  : T extends 'galDownload.downloadSignatureSecret'
                                     ? string | undefined
-                                    : T extends 'r2.novel.r2LightNovelAccessKey'
+                                    : T extends 'r2.r2Endpoint'
                                       ? string | undefined
-                                      : T extends 'r2.novel.r2LightNovelSecretKey'
+                                      : T extends 'r2.novel.r2LightNovelAccessKey'
                                         ? string | undefined
-                                        : T extends 'r2.novel.r2LightNovelBucket'
+                                        : T extends 'r2.novel.r2LightNovelSecretKey'
                                           ? string | undefined
-                                          : T extends 'r2.images.r2ImageAccessKey'
+                                          : T extends 'r2.novel.r2LightNovelBucket'
                                             ? string | undefined
-                                            : T extends 'r2.images.r2ImageSecretKey'
+                                            : T extends 'r2.images.r2ImageAccessKey'
                                               ? string | undefined
-                                              : T extends 'r2.images.r2ImageBucket'
+                                              : T extends 'r2.images.r2ImageSecretKey'
                                                 ? string | undefined
-                                                : T extends 'bangumi.clientId'
+                                                : T extends 'r2.images.r2ImageBucket'
                                                   ? string | undefined
-                                                  : T extends 'bangumi.clientSecret'
+                                                  : T extends 'bangumi.clientId'
                                                     ? string | undefined
-                                                    : never
+                                                    : T extends 'bangumi.clientSecret'
+                                                      ? string | undefined
+                                                      : never
