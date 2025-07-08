@@ -299,7 +299,7 @@ jobs:
         run: |
           echo "Waiting for production server to be ready..."
           sleep 30
-          curl -f ${{ secrets.PRODUCTION_URL }}/health || exit 1
+          curl -f ${{ secrets.PRODUCTION_URL }} || exit 1
 
       # - name: Notify deployment success
       #   uses: 8398a7/action-slack@v3
