@@ -15,4 +15,11 @@ export class AppController {
       timestamp: new Date().toISOString(),
     }
   }
+
+  @Get('health')
+  getHealth() {
+    return {
+      status: 'ok',
+    }
+  }
 }

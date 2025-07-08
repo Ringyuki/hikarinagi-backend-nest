@@ -12,6 +12,9 @@ import { ApiResponse } from '../interfaces/response.interface'
 @Injectable()
 export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T>> {
   intercept(context: ExecutionContext, next: CallHandler): Observable<ApiResponse<T>> {
+    if (context.switchToHttp().getRequest().url.includes('health')) {
+      return next.handle()
+    }
     return next.handle().pipe(
       map(data => {
         return {

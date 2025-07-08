@@ -15,7 +15,7 @@ async function bootstrap() {
 
   // 全局前缀
   app.setGlobalPrefix('api', {
-    exclude: [''],
+    exclude: ['', 'health'],
   })
   // 全局管道
   app.useGlobalPipes(
