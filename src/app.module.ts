@@ -12,8 +12,11 @@ import { UserModule } from './modules/user/user.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { EmailModule } from './modules/email/email.module'
 import { SharedModule } from './modules/shared/shared.module'
+import { EntitiesModule } from './modules/entities/entities.module'
 import { RootAppModule } from './common/modules/app.module'
-import { APP_GUARD } from '@nestjs/core'
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
+import { TokenExtractionInterceptor } from './common/interceptors/token-extraction.interceptor'
+import { NSFWFilterInterceptor } from './common/interceptors/nsfw-filter.interceptor'
 
 @Module({
   imports: [
@@ -76,6 +79,7 @@ import { APP_GUARD } from '@nestjs/core'
 
     // 共享模块
     SharedModule,
+    EntitiesModule,
 
     // 应用模块
     RootAppModule,
@@ -88,6 +92,14 @@ import { APP_GUARD } from '@nestjs/core'
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TokenExtractionInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: NSFWFilterInterceptor,
     },
   ],
 })
