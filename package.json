@@ -22,7 +22,16 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "prepare": "husky"
+    "prepare": "husky",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:restart": "pm2 restart hikarinagi-backend-nestjs",
+    "pm2:stop": "pm2 stop hikarinagi-backend-nestjs",
+    "pm2:reload": "pm2 reload hikarinagi-backend-nestjs",
+    "pm2:logs": "pm2 logs hikarinagi-backend-nestjs",
+    "pm2:status": "pm2 show hikarinagi-backend-nestjs",
+    "pm2:monitor": "pm2 monit",
+    "deploy": "chmod +x scripts/deploy.sh && ./scripts/deploy.sh production",
+    "deploy:staging": "chmod +x scripts/deploy.sh && ./scripts/deploy.sh staging"
   },
   "lint-staged": {
     "*.{js,ts}": [
