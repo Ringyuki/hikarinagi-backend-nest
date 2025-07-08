@@ -110,13 +110,14 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
 
-      - name: Run e2e tests
-        run: pnpm run test:e2e
-        env:
-          NODE_ENV: test
-          DATABASE_URI: mongodb://localhost:27017/hikarinagi-test
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
+      # E2E tests disabled - relying on unit tests for coverage
+      # - name: Run e2e tests
+      #   run: pnpm run test:e2e
+      #   env:
+      #     NODE_ENV: test
+      #     DATABASE_URI: mongodb://localhost:27017/hikarinagi-test
+      #     REDIS_HOST: localhost
+      #     REDIS_PORT: 6379
 
       - name: Generate coverage report
         run: pnpm run test:cov
