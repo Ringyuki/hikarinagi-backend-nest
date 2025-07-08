@@ -229,7 +229,7 @@ jobs:
 
             $PNPM_CMD install --frozen-lockfile
             $PNPM_CMD run build
-            pm2 restart hikarinagi-backend-nestjs --env staging || pm2 start ecosystem.config.js --env staging
+            pm2 restart ecosystem.config.js --env staging || pm2 start ecosystem.config.js --env staging
             pm2 save
 
       - name: Health check
@@ -288,7 +288,7 @@ jobs:
 
             $PNPM_CMD install --frozen-lockfile
             $PNPM_CMD run build
-            pm2 restart hikarinagi-backend-nestjs --env production || pm2 start ecosystem.config.js --env production
+            pm2 restart ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
             pm2 save
 
       - name: Health check
