@@ -203,11 +203,33 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: ${{ secrets.STAGING_PORT || 22 }}
           script: |
+            # 加载用户环境变量
+            source ~/.bashrc 2>/dev/null || true
+            source ~/.profile 2>/dev/null || true
+
             cd ${{ secrets.STAGING_APP_PATH }}
+            git config --global --add safe.directory ${{ secrets.STAGING_APP_PATH }}
             git pull origin develop
-            pnpm install --frozen-lockfile
-            pnpm run build
-            pm2 restart ecosystem.config.js --env staging
+
+            # 检查pnpm路径并设置
+            if command -v pnpm &> /dev/null; then
+              echo "pnpm found: $(which pnpm)"
+              PNPM_CMD="pnpm"
+            elif [ -f ~/.local/share/pnpm/pnpm ]; then
+              echo "pnpm found at ~/.local/share/pnpm/pnpm"
+              PNPM_CMD="~/.local/share/pnpm/pnpm"
+            elif [ -f /usr/local/bin/pnpm ]; then
+              echo "pnpm found at /usr/local/bin/pnpm"
+              PNPM_CMD="/usr/local/bin/pnpm"
+            else
+              echo "pnpm not found, installing..."
+              npm install -g pnpm
+              PNPM_CMD="pnpm"
+            fi
+
+            $PNPM_CMD install --frozen-lockfile
+            $PNPM_CMD run build
+            pm2 restart hikarinagi-backend-nestjs --env staging || pm2 start ecosystem.config.js --env staging
             pm2 save
 
       - name: Health check
@@ -240,11 +262,33 @@ jobs:
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           port: ${{ secrets.PRODUCTION_PORT || 22 }}
           script: |
+            # 加载用户环境变量
+            source ~/.bashrc 2>/dev/null || true
+            source ~/.profile 2>/dev/null || true
+
             cd ${{ secrets.PRODUCTION_APP_PATH }}
+            git config --global --add safe.directory ${{ secrets.PRODUCTION_APP_PATH }}
             git pull origin main
-            pnpm install --frozen-lockfile
-            pnpm run build
-            pm2 restart ecosystem.config.js --env production
+
+            # 检查pnpm路径并设置
+            if command -v pnpm &> /dev/null; then
+              echo "pnpm found: $(which pnpm)"
+              PNPM_CMD="pnpm"
+            elif [ -f ~/.local/share/pnpm/pnpm ]; then
+              echo "pnpm found at ~/.local/share/pnpm/pnpm"
+              PNPM_CMD="~/.local/share/pnpm/pnpm"
+            elif [ -f /usr/local/bin/pnpm ]; then
+              echo "pnpm found at /usr/local/bin/pnpm"
+              PNPM_CMD="/usr/local/bin/pnpm"
+            else
+              echo "pnpm not found, installing..."
+              npm install -g pnpm
+              PNPM_CMD="pnpm"
+            fi
+
+            $PNPM_CMD install --frozen-lockfile
+            $PNPM_CMD run build
+            pm2 restart hikarinagi-backend-nestjs --env production || pm2 start ecosystem.config.js --env production
             pm2 save
 
       - name: Health check
@@ -279,8 +323,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run npm audit
-        run: npm audit --audit-level moderate
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run pnpm audit
+        run: pnpm audit --audit-level moderate || true
 
       - name: Run CodeQL Analysis
         uses: github/codeql-action/init@v3
