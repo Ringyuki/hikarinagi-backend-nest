@@ -214,7 +214,6 @@ export class EnvironmentValidator {
       const productionChecks = [
         { key: 'JWT_SECRET', check: (v: string) => v.includes('your-super-secret') },
         { key: 'JWT_REFRESH_SECRET', check: (v: string) => v.includes('your-super-secret') },
-        { key: 'MONGO_URI', check: (v: string) => v.includes('localhost') },
       ]
       productionChecks.forEach(({ key, check }) => {
         const value = process.env[key]
