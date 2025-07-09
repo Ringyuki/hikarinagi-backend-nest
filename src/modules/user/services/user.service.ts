@@ -216,6 +216,7 @@ export class UserService {
     if (tokenIndex === -1) {
       throw new UnauthorizedException('无效的 refreshToken')
     }
+    const userSetting = await this.userSettingModel.findOne({ user: user._id })
 
     const hikariAccessTokenPayload = {
       _id: user._id,
@@ -223,6 +224,7 @@ export class UserService {
       name: user.name,
       email: user.email,
       hikariUserGroup: user.hikariUserGroup,
+      userSetting,
     }
     const hikariAccessToken = this.jwtService.sign(hikariAccessTokenPayload, {
       expiresIn: this.configService.get('jwt.hikariAccessTokenExpiresIn'),

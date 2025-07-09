@@ -178,67 +178,67 @@ jobs:
           path: dist/
           retention-days: 7
 
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-    environment: staging
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # deploy-staging:
+  #   name: Deploy to Staging
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+  #   environment: staging
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: dist/
+  #     - name: Download build artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: build-artifacts
+  #         path: dist/
 
-      # 使用 Action 进行部署 (推荐方式)
-      - name: Deploy to staging server
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          port: ${{ secrets.STAGING_PORT || 22 }}
-          script: |
-            # 加载用户环境变量
-            source ~/.bashrc 2>/dev/null || true
-            source ~/.profile 2>/dev/null || true
+  #     # 使用 Action 进行部署 (推荐方式)
+  #     - name: Deploy to staging server
+  #       uses: appleboy/ssh-action@v1.0.0
+  #       with:
+  #         host: ${{ secrets.STAGING_HOST }}
+  #         username: ${{ secrets.STAGING_USER }}
+  #         key: ${{ secrets.STAGING_SSH_KEY }}
+  #         port: ${{ secrets.STAGING_PORT || 22 }}
+  #         script: |
+  #           # 加载用户环境变量
+  #           source ~/.bashrc 2>/dev/null || true
+  #           source ~/.profile 2>/dev/null || true
 
-            cd ${{ secrets.STAGING_APP_PATH }}
-            git config --global --add safe.directory ${{ secrets.STAGING_APP_PATH }}
-            git pull origin develop
+  #           cd ${{ secrets.STAGING_APP_PATH }}
+  #           git config --global --add safe.directory ${{ secrets.STAGING_APP_PATH }}
+  #           git pull origin develop
 
-            # 检查pnpm路径并设置
-            if command -v pnpm &> /dev/null; then
-              echo "pnpm found: $(which pnpm)"
-              PNPM_CMD="pnpm"
-            elif [ -f ~/.local/share/pnpm/pnpm ]; then
-              echo "pnpm found at ~/.local/share/pnpm/pnpm"
-              PNPM_CMD="~/.local/share/pnpm/pnpm"
-            elif [ -f /usr/local/bin/pnpm ]; then
-              echo "pnpm found at /usr/local/bin/pnpm"
-              PNPM_CMD="/usr/local/bin/pnpm"
-            else
-              echo "pnpm not found, installing..."
-              npm install -g pnpm
-              # 使用npx来调用pnpm，避免PATH问题
-              PNPM_CMD="npx pnpm"
-              echo "pnpm will be called via npx"
-            fi
+  #           # 检查pnpm路径并设置
+  #           if command -v pnpm &> /dev/null; then
+  #             echo "pnpm found: $(which pnpm)"
+  #             PNPM_CMD="pnpm"
+  #           elif [ -f ~/.local/share/pnpm/pnpm ]; then
+  #             echo "pnpm found at ~/.local/share/pnpm/pnpm"
+  #             PNPM_CMD="~/.local/share/pnpm/pnpm"
+  #           elif [ -f /usr/local/bin/pnpm ]; then
+  #             echo "pnpm found at /usr/local/bin/pnpm"
+  #             PNPM_CMD="/usr/local/bin/pnpm"
+  #           else
+  #             echo "pnpm not found, installing..."
+  #             npm install -g pnpm
+  #             # 使用npx来调用pnpm，避免PATH问题
+  #             PNPM_CMD="npx pnpm"
+  #             echo "pnpm will be called via npx"
+  #           fi
 
-            $PNPM_CMD install --frozen-lockfile
-            $PNPM_CMD run build
-            pm2 restart ecosystem.config.js --env staging || pm2 start ecosystem.config.js --env staging
-            pm2 save
+  #           $PNPM_CMD install --frozen-lockfile
+  #           $PNPM_CMD run build
+  #           pm2 restart ecosystem.config.js --env staging || pm2 start ecosystem.config.js --env staging
+  #           pm2 save
 
-      - name: Health check
-        run: |
-          echo "Waiting for staging server to be ready..."
-          sleep 30
-          curl -f ${{ secrets.STAGING_URL }}/health || exit 1
+  #     - name: Health check
+  #       run: |
+  #         echo "Waiting for staging server to be ready..."
+  #         sleep 30
+  #         curl -f ${{ secrets.STAGING_URL }}/health || exit 1
 
   deploy-production:
     name: Deploy to Production

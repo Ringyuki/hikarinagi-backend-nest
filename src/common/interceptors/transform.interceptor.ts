@@ -20,8 +20,10 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
         return {
           success: true,
           code: data.code || HttpStatus.OK,
+          version: 'v2 dev',
           message: data.message || '',
           data: data.data,
+          cached: data.cached || false,
           timestamp: Date.now(),
         }
       }),
