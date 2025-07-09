@@ -6,6 +6,9 @@ declare module 'mongoose' {
     includeEmail?: boolean
     includeStatus?: boolean
     include_id?: boolean
+
+    // for character schema
+    notInclude_id?: boolean
   }
 }
 
@@ -13,4 +16,8 @@ export interface UserToObjectOptions extends MongooseToObjectOptions {
   includeEmail?: boolean
   includeStatus?: boolean
   include_id?: boolean
+}
+
+export interface CharacterToObjectOptions extends MongooseToObjectOptions {
+  notInclude_id?: boolean
 }
