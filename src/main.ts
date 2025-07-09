@@ -4,7 +4,10 @@ import { ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { TransformInterceptor } from './common/interceptors/transform.interceptor'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
+import { EnvironmentValidator } from './common/config/validators/env.validator'
 import * as cookieParser from 'cookie-parser'
+
+EnvironmentValidator.validateEnvironment()
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
@@ -41,4 +44,16 @@ async function bootstrap() {
   await app.listen(port)
   console.log(`hikarinagi backend running on: http://localhost:${port}`)
 }
+
+// 处理未捕获的异常和拒绝
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason)
+  process.exit(1)
+})
+
+process.on('uncaughtException', error => {
+  console.error('Uncaught Exception:', error)
+  process.exit(1)
+})
+
 bootstrap()
