@@ -196,7 +196,7 @@ jobs:
 
   #     # 使用 Action 进行部署 (推荐方式)
   #     - name: Deploy to staging server
-  #       uses: appleboy/ssh-action@v1.0.0
+  #       uses: appleboy/ssh-action@v1.2.2
   #       with:
   #         host: ${{ secrets.STAGING_HOST }}
   #         username: ${{ secrets.STAGING_USER }}
@@ -257,7 +257,7 @@ jobs:
           path: dist/
 
       - name: Deploy to production server
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
