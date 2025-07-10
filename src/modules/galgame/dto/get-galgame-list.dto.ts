@@ -1,31 +1,67 @@
-import { IsOptional, IsString, IsNotEmpty } from 'class-validator'
+import {
+  IsOptional,
+  IsNumber,
+  IsString,
+  IsArray,
+  IsEnum,
+  Min,
+  Max,
+  IsNotEmpty,
+} from 'class-validator'
+import { Type } from 'class-transformer'
+import { ToArray, ToNumberArray } from '../../../common/decorators/transform.decorators'
+
+enum SortField {
+  RELEASE_DATE = 'releaseDate',
+  VIEWS = 'views',
+  RATE = 'rate',
+  RATE_COUNT = 'rateCount',
+}
+
+enum SortOrder {
+  ASC = 'asc',
+  DESC = 'desc',
+}
 
 export class GetGalgameListDto {
-  @IsString()
   @IsNotEmpty({ message: 'page is required' })
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
   page: number
 
-  @IsString()
   @IsNotEmpty({ message: 'limit is required' })
+  @IsNumber()
+  @Min(1)
+  @Max(100)
+  @Type(() => Number)
   limit: number
 
-  @IsString()
   @IsOptional()
-  year?: string
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @ToNumberArray()
+  year?: number[]
 
-  @IsString()
   @IsOptional()
-  month?: string
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @Min(1, { each: true })
+  @Max(12, { each: true })
+  @ToNumberArray()
+  month?: number[]
 
-  @IsString()
   @IsOptional()
-  sortField?: string
+  @IsEnum(SortField)
+  sortField?: SortField
 
-  @IsString()
   @IsOptional()
-  sortOrder?: string
+  @IsEnum(SortOrder)
+  sortOrder?: SortOrder = SortOrder.DESC
 
-  @IsString()
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ToArray()
   tagsField?: string[]
 }

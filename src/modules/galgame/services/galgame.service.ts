@@ -54,13 +54,7 @@ export class GalgameService {
     req: RequestWithUser,
     query: GetGalgameListDto,
   ): Promise<PaginatedResult<any>> {
-    let { page, limit } = query
-    page = Number(page)
-    limit = Number(limit)
-    if (isNaN(page) || isNaN(limit)) {
-      throw new BadRequestException('page and limit must be numbers')
-    }
-    const { year, month, sortField, sortOrder, tagsField } = query
+    const { page, limit, year, month, sortField, sortOrder, tagsField } = query
 
     const matchStage: any = {
       status: 'published',
@@ -77,49 +71,44 @@ export class GalgameService {
       throw new BadRequestException('month must be used with year')
     }
 
-    if (year) {
-      // 将 year 转换为数字数组
-      const yearArray = Array.isArray(year) ? year : [year]
-      const yearNumbers = yearArray.map(y => Number(y)).filter(y => !isNaN(y)) // 过滤掉非数字
-      if (yearNumbers.length === 0) {
-        throw new BadRequestException('year must be a number or an array of numbers')
-      }
-      // 处理日期
+    if (year?.length) {
       const dateRangeConditions = []
-      // 将 month 转换为数字数组
-      if (month) {
-        const monthArray = Array.isArray(month) ? month : [month]
-        const monthNumbers = monthArray
-          .map(m => Number(m))
-          .filter(m => !isNaN(m) && m > 0 && m <= 12)
-        if (monthNumbers.length === 0) {
-          throw new BadRequestException(
-            'month must be a number or an array of numbers between 1 and 12',
-          )
+
+      if (month?.length) {
+        // 验证月份范围（DTO层没有验证范围，这里补充业务验证）
+        const validMonths = month.filter(m => m >= 1 && m <= 12)
+        if (validMonths.length === 0) {
+          throw new BadRequestException('month must be between 1 and 12')
         }
 
-        for (const yearNumber of yearNumbers) {
-          for (const monthNumber of monthNumbers) {
-            const monthStr = monthNumber < 10 ? `0${monthNumber}` : `${monthNumber}`
+        // 为每个年月组合创建日期范围
+        for (const yearNumber of year) {
+          for (const monthNumber of validMonths) {
+            const monthStr = monthNumber.toString().padStart(2, '0')
             const startDateStr = `${yearNumber}-${monthStr}-01`
             const lastDay = new Date(yearNumber, monthNumber, 0).getDate()
-            const endDateStr = `${yearNumber}-${monthStr}-${lastDay}`
+            const endDateStr = `${yearNumber}-${monthStr}-${lastDay.toString().padStart(2, '0')}`
 
             dateRangeConditions.push({
-              $and: [{ releaseDate: { $gte: startDateStr } }, { releaseDate: { $lt: endDateStr } }],
+              $and: [
+                { releaseDate: { $gte: startDateStr } },
+                { releaseDate: { $lte: endDateStr } },
+              ],
             })
           }
         }
       } else {
-        // 如果没有 month 参数，为每一年创建一个日期范围条件
-        for (const yearNumber of yearNumbers) {
-          const startDateStr = `${yearNumber}-01-01`
-          const endDateStr = `${yearNumber}-12-31`
+        // 只有年份，创建整年范围
+        for (const yearNumber of year) {
           dateRangeConditions.push({
-            $and: [{ releaseDate: { $gte: startDateStr } }, { releaseDate: { $lt: endDateStr } }],
+            $and: [
+              { releaseDate: { $gte: `${yearNumber}-01-01` } },
+              { releaseDate: { $lte: `${yearNumber}-12-31` } },
+            ],
           })
         }
       }
+
       if (dateRangeConditions.length > 0) {
         matchStage.$or = dateRangeConditions
       }
