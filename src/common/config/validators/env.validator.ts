@@ -11,13 +11,6 @@ interface EnvConfig {
 export class EnvironmentValidator {
   private static readonly logger = new Logger('EnvironmentValidator')
 
-  private static readonly colors = {
-    red: '\x1b[31m',
-    yellow: '\x1b[33m',
-    green: '\x1b[32m',
-    reset: '\x1b[0m',
-  }
-
   private static readonly ENV_CONFIG: EnvConfig[] = [
     // base
     {
@@ -61,14 +54,14 @@ export class EnvironmentValidator {
       required: false,
       type: 'number',
       description: '限流时间窗口',
-      defaultValue: 60,
+      defaultValue: 60000, // 60s
     },
     {
       key: 'THROTTLE_LIMIT',
       required: false,
       type: 'number',
       description: '限流次数限制',
-      defaultValue: 10,
+      defaultValue: 100, // 100次
     },
 
     // email
@@ -259,13 +252,11 @@ export class EnvironmentValidator {
 
   private static printValidationResults(errors: string[], warnings: string[]): void {
     if (warnings.length > 0) {
-      warnings.forEach(line =>
-        this.logger.warn(`${this.colors.yellow}  ${line}${this.colors.reset}`),
-      )
+      warnings.forEach(line => this.logger.warn(`${line}`))
     }
 
     if (errors.length > 0) {
-      errors.forEach(line => this.logger.error(`${this.colors.red}  ${line}${this.colors.reset}`))
+      errors.forEach(line => this.logger.error(`${line}`))
     }
   }
 }

@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { MongooseModule } from '@nestjs/mongoose'
 import { CacheModule } from '@nestjs/cache-manager'
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
+import { ThrottlerGuard, ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler'
 import { redisStore } from 'cache-manager-redis-yet'
 import config from './common/config/configs'
 import { HikariConfigModule } from './common/config/config.module'
@@ -71,12 +71,19 @@ import { GalgameModule } from './modules/galgame/galgame.module'
     }),
 
     // 限流模块
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60,
-        limit: 10,
-      },
-    ]),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [HikariConfigService],
+      useFactory: (configService: HikariConfigService): ThrottlerModuleOptions => ({
+        throttlers: [
+          {
+            ttl: configService.get('throttle.ttl'),
+            limit: configService.get('throttle.limit'),
+          },
+        ],
+        errorMessage: 'Too many requests, please try again later.',
+      }),
+    }),
 
     // 共享模块
     SharedModule,
