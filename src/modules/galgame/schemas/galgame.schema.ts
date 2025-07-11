@@ -141,7 +141,15 @@ export class GalgameCreator {
 @Schema({
   timestamps: true,
   toJSON: {
-    transform: (_, ret) => {
+    transform: (_, ret, options) => {
+      if (options.onlyDownloadInfo) {
+        for (const key in ret) {
+          if (key !== 'downloadInfo') {
+            delete ret[key]
+          }
+        }
+        return ret
+      }
       delete ret.__v
       delete ret.createdAt
       delete ret.updatedAt

@@ -9,6 +9,9 @@ declare module 'mongoose' {
 
     // for character schema
     notInclude_id?: boolean
+
+    // for galgame schema
+    onlyDownloadInfo?: boolean
   }
 }
 
@@ -20,4 +23,8 @@ export interface UserToObjectOptions extends MongooseToObjectOptions {
 
 export interface CharacterToObjectOptions extends MongooseToObjectOptions {
   notInclude_id?: boolean
+}
+
+export interface GalgameToObjectOptions extends MongooseToObjectOptions {
+  onlyDownloadInfo?: boolean
 }

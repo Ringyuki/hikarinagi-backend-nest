@@ -1,15 +1,26 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
-import { Galgame, GalgameDocument } from '../schemas/galgame.schema'
+import { DownloadInfo, Galgame, GalgameDocument } from '../schemas/galgame.schema'
+import { GalgameLinks, GalgameLinksDocument } from '../schemas/galgame-links.schema'
 import { RequestWithUser } from 'src/modules/auth/interfaces/request-with-user.interface'
 import * as mongoose from 'mongoose'
 import { GetGalgameListDto } from '../dto/get-galgame-list.dto'
 import { PaginatedResult } from 'src/common/interfaces/paginated-result.interface'
+import * as crypto from 'crypto'
+import { HikariConfigService } from '../../../common/config/services/config.service'
+import { Article, ArticleDocument } from '../../content/schemas/article.schema'
+import { Post, PostDocument } from '../../content/schemas/post.schema'
 
 @Injectable()
 export class GalgameService {
-  constructor(@InjectModel(Galgame.name) private galgameModel: Model<GalgameDocument>) {}
+  constructor(
+    @InjectModel(Galgame.name) private galgameModel: Model<GalgameDocument>,
+    @InjectModel(GalgameLinks.name) private galgameLinksModel: Model<GalgameLinksDocument>,
+    @InjectModel(Article.name) private articleModel: Model<ArticleDocument>,
+    @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    private readonly hikariConfigService: HikariConfigService,
+  ) {}
 
   async findById(id: number | string) {
     if (isNaN(Number(id))) {
@@ -256,6 +267,406 @@ export class GalgameService {
         totalPages,
         currentPage: page,
       },
+    }
+  }
+
+  async getDownloadInfo(id: number | string): Promise<DownloadInfo> {
+    if (isNaN(Number(id))) {
+      throw new BadRequestException('id must be a number')
+    }
+    const galgame = await this.galgameModel.findOneAndUpdate(
+      {
+        galId: id,
+        status: 'published',
+      },
+      {
+        $inc: {
+          'downloadInfo.viewTimes': 1,
+        },
+      },
+      {
+        new: true,
+        timestamps: false,
+      },
+    )
+    if (!galgame) {
+      throw new NotFoundException('galgame not found')
+    }
+    return galgame.toJSON({ onlyDownloadInfo: true }) as unknown as DownloadInfo
+  }
+
+  async getDownloadAuthInfo(id: number, timestamp: number, req: RequestWithUser) {
+    const { user } = req
+    const user_id = user._id
+
+    const message = `${id}-${user_id}-${timestamp}`
+    const secret = this.hikariConfigService.get('galDownload.downloadSignatureSecret')
+    const signature = crypto.createHmac('sha256', secret).update(message).digest('hex')
+
+    await this.galgameModel.updateOne(
+      {
+        galId: String(id),
+      },
+      { $inc: { 'downloadInfo.downloadTimes': 1 } },
+    )
+
+    return {
+      signature,
+    }
+  }
+
+  async getGameLinks(id: number | string) {
+    if (isNaN(Number(id))) {
+      throw new BadRequestException('id must be a number')
+    }
+
+    const galgame = await this.galgameModel.findOne({
+      galId: String(id),
+      status: 'published',
+    })
+    if (!galgame) {
+      throw new NotFoundException('galgame not found')
+    }
+
+    const links = await this.galgameLinksModel
+      .find({
+        galId: galgame._id,
+      })
+      .populate('userId', 'name avatar userId')
+
+    if (!links || links.length === 0) {
+      return []
+    }
+
+    const transformedLinks = links.map(linkDoc => {
+      const linkDetails = linkDoc.linkDetail.map(detail => {
+        const metaObj = {}
+        detail.link_meta.forEach(meta => {
+          metaObj[meta.key] = meta.value
+        })
+
+        return {
+          id: detail._id,
+          link: detail.link,
+          note: detail.note,
+          createdAt: detail.createdAt,
+          ...metaObj,
+        }
+      })
+
+      return {
+        userId: linkDoc.userId,
+        linkType: linkDoc.linkType,
+        links: linkDetails,
+      }
+    })
+
+    const groupedLinks = {
+      officialLinks: transformedLinks.filter(l => l.linkType === 'official-link'),
+      downloadLinks: transformedLinks.filter(l => l.linkType === 'download-link'),
+    }
+
+    return groupedLinks
+  }
+
+  async getRelatedGalgames(id: number | string, req: RequestWithUser) {
+    if (isNaN(Number(id))) {
+      throw new BadRequestException('id must be a number')
+    }
+
+    const { user } = req
+    let showNSFW: boolean
+    if (user && user.userSetting) {
+      showNSFW = user.userSetting.showNSFWContent
+    } else showNSFW = false
+
+    const nsfwFilter = showNSFW ? {} : { nsfw: false }
+
+    const galgame = await this.galgameModel
+      .findOne({ galId: String(id) })
+      .where('status')
+      .equals('published')
+      .select('_id galId nsfw')
+      .populate({
+        path: 'producers.producer',
+        select: 'name',
+      })
+      .populate({
+        path: 'tags.tag',
+        select: 'name',
+      })
+      .populate({
+        path: 'characters.character',
+        select: 'name',
+      })
+      .populate({
+        path: 'staffs.person',
+        select: 'name',
+      })
+      .lean()
+    if (!galgame) {
+      throw new NotFoundException('galgame not found')
+    }
+
+    const gal_id = galgame._id
+    // const galProducers = galgame.producers.map(producer => producer.producer._id)
+    const galTags = galgame.tags.map(tag => tag.tag._id)
+    const galCharacters = galgame.characters.map(character => character.character._id)
+    const galStaffs = galgame.staffs.map(staff => staff.person._id)
+    // 获取相关gal
+
+    const relatedGalgames = []
+
+    // const relatedByProcucers = await Galgame.find({
+    //   'producers.producer': { $in: galProducers },
+    //   _id: { $ne: gal_id }
+    // }).where('status').equals('published').select('galId cover transTitle originTitle')
+    // relatedGalgames.push(...relatedByProcucers)
+    // 至少有3个tag相同
+    const relatedByTags = await this.galgameModel.aggregate([
+      {
+        $match: {
+          _id: { $ne: gal_id },
+          status: 'published',
+          'tags.tag': { $in: galTags },
+          ...nsfwFilter,
+        },
+      },
+      {
+        $project: {
+          galId: 1,
+          cover: 1,
+          transTitle: 1,
+          originTitle: 1,
+          nsfw: 1,
+          matchingTagsCount: {
+            $size: {
+              $filter: {
+                input: '$tags',
+                as: 'tag',
+                cond: { $in: ['$$tag.tag', galTags] },
+              },
+            },
+          },
+        },
+      },
+      { $match: { matchingTagsCount: { $gte: 5 } } },
+    ])
+    relatedGalgames.push(...relatedByTags)
+    // 至少有1个角色相同
+    const relatedByCharacters = await this.galgameModel.aggregate([
+      {
+        $match: {
+          _id: { $ne: gal_id },
+          status: 'published',
+          'characters.character': { $in: galCharacters },
+          ...nsfwFilter,
+        },
+      },
+      {
+        $project: {
+          galId: 1,
+          cover: 1,
+          transTitle: 1,
+          originTitle: 1,
+          nsfw: 1,
+          matchingCharactersCount: {
+            $size: {
+              $filter: {
+                input: '$characters',
+                as: 'character',
+                cond: { $in: ['$$character.character', galCharacters] },
+              },
+            },
+          },
+        },
+      },
+      { $match: { matchingCharactersCount: { $gte: 1 } } },
+    ])
+    relatedGalgames.push(...relatedByCharacters)
+    // 至少有1个staff相同
+    const relatedByStaffs = await this.galgameModel.aggregate([
+      {
+        $match: {
+          _id: { $ne: gal_id },
+          status: 'published',
+          'staffs.person': { $in: galStaffs },
+          ...nsfwFilter,
+        },
+      },
+      {
+        $project: {
+          galId: 1,
+          cover: 1,
+          transTitle: 1,
+          originTitle: 1,
+          nsfw: 1,
+          matchingStaffsCount: {
+            $size: {
+              $filter: {
+                input: '$staffs',
+                as: 'staff',
+                cond: { $in: ['$$staff.person', galStaffs] },
+              },
+            },
+          },
+        },
+      },
+      { $match: { matchingStaffsCount: { $gte: 1 } } },
+    ])
+    relatedGalgames.push(...relatedByStaffs)
+
+    const scoreMap = {
+      matchingTagsCount: 1,
+      matchingCharactersCount: 10,
+      matchingStaffsCount: 5,
+    }
+    // 计算分数
+    const scoredGalgames = relatedGalgames.map(galgame => {
+      const score = Object.keys(scoreMap).reduce((total, key) => {
+        return total + (galgame[key] || 0) * scoreMap[key]
+      }, 0)
+      return { ...galgame, score }
+    })
+    // 按照分数排序
+    scoredGalgames.sort((a, b) => b.score - a.score)
+    // 去重
+    const uniqueGalgames = new Map()
+    scoredGalgames.forEach(galgame => {
+      if (!uniqueGalgames.has(galgame.galId)) {
+        uniqueGalgames.set(galgame.galId, galgame)
+      }
+    })
+    let filteredRelatedGalgames = Array.from(uniqueGalgames.values()).map(galgame => {
+      return {
+        galId: galgame.galId,
+        cover: galgame.cover,
+        transTitle: galgame.transTitle,
+        originTitle: galgame.originTitle,
+        nsfw: galgame.nsfw,
+        score: galgame.score,
+      }
+    })
+    // 过滤掉当前游戏, 保留12个
+    filteredRelatedGalgames = filteredRelatedGalgames
+      .filter(galgame => galgame.galId !== String(id))
+      .slice(0, 32)
+
+    // 获取相关的文章
+    let relatedAriticles = []
+    const directedRelatedArticles = await this.articleModel
+      .find({ 'relatedWorks.workId': gal_id })
+      .where('status')
+      .equals('published')
+      .where('visible')
+      .equals('public')
+      .where('isReview')
+      .equals(false)
+      .populate('creator.userId', 'name avatar userId -_id')
+      .select('id title cover content createdAt updatedAt')
+      .lean()
+
+    relatedAriticles.push(...directedRelatedArticles)
+
+    const targetWorkId = new mongoose.Types.ObjectId(String(gal_id))
+    const sectionRelatedArticles = await this.articleModel.aggregate([
+      {
+        $match: {
+          status: 'published',
+          visible: 'public',
+          sections: { $exists: true, $ne: [] },
+        },
+      },
+      {
+        $lookup: {
+          from: 'sections',
+          localField: 'sections',
+          foreignField: '_id',
+          as: 'joinedSections',
+        },
+      },
+      {
+        $unwind: {
+          path: '$joinedSections',
+          preserveNullAndEmptyArrays: false,
+        },
+      },
+      {
+        $match: {
+          'joinedSections.relatedWork.workId': targetWorkId,
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'creator.userId',
+          foreignField: '_id',
+          as: 'creatorData',
+        },
+      },
+      {
+        $unwind: {
+          path: '$creatorData',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          id: 1,
+          title: 1,
+          cover: 1,
+          content: 1,
+          creator: {
+            userId: {
+              userId: '$creatorData.userId',
+              name: '$creatorData.name',
+              avatar: '$creatorData.avatar',
+            },
+          },
+          createdAt: 1,
+          updatedAt: 1,
+          sectionTitle: '$joinedSections.title',
+        },
+      },
+    ])
+    relatedAriticles.push(...sectionRelatedArticles)
+    // 去重
+    const uniqueArticles = new Map()
+    relatedAriticles.forEach(article => {
+      if (!uniqueArticles.has(article.id)) {
+        uniqueArticles.set(article.id, article)
+      }
+    })
+    relatedAriticles = Array.from(uniqueArticles.values()).map(article => {
+      return {
+        id: article.id,
+        title: article.title,
+        cover: article.cover,
+        content: article.content.slice(0, 1000),
+        creator: article.creator,
+        createdAt: article.createdAt,
+        updatedAt: article.updatedAt,
+      }
+    })
+
+    if (relatedAriticles.length) {
+      relatedAriticles = relatedAriticles.map(article => {
+        article.creator = article.creator.userId
+        return {
+          id: article.id,
+          title: article.title,
+          cover: article.cover,
+          content: article.content.slice(0, 1000),
+          creator: article.creator,
+          createdAt: article.createdAt,
+          updatedAt: article.updatedAt,
+        }
+      })
+    }
+
+    return {
+      relatedGalgames: filteredRelatedGalgames,
+      relatedAriticles: relatedAriticles,
     }
   }
 }

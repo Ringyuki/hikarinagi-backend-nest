@@ -1,7 +1,13 @@
-import { Controller, Get, Param, Query, Req } from '@nestjs/common'
+import { Controller, Get, Post, Param, Query, Req, Body, UseGuards } from '@nestjs/common'
+import { Roles } from '../../auth/decorators/roles.decorator'
 import { GalgameService } from '../services/galgame.service'
 import { GetGalgameListDto } from '../dto/get-galgame-list.dto'
-import { RequestWithUser } from 'src/modules/auth/interfaces/request-with-user.interface'
+import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
+import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
+import { RolesGuard } from '../../auth/guards/roles.guard'
+import { DownloadAuthDto } from '../dto/download-auth.dto'
+import { DisableNSFWFilter } from '../../auth/decorators/disable-nsfw-filter.decorator'
 
 @Controller('galgame')
 export class GalgameController {
@@ -20,6 +26,49 @@ export class GalgameController {
     const galgame = await this.galgameService.findById(id)
     return {
       data: galgame,
+    }
+  }
+
+  @Get(':id/download-info')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(HikariUserGroup.USER)
+  async getDownloadInfo(@Param('id') id: string) {
+    const downloadInfo = await this.galgameService.getDownloadInfo(id)
+    return {
+      data: downloadInfo,
+    }
+  }
+
+  @Post('download-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(HikariUserGroup.USER)
+  async getDownloadAuthInfo(@Body() body: DownloadAuthDto, @Req() req: RequestWithUser) {
+    const downloadAuthInfo = await this.galgameService.getDownloadAuthInfo(
+      body.id,
+      body.timestamp,
+      req,
+    )
+    return {
+      data: downloadAuthInfo,
+    }
+  }
+
+  @Get(':id/links')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(HikariUserGroup.USER)
+  async getGameLinks(@Param('id') id: string) {
+    const links = await this.galgameService.getGameLinks(id)
+    return {
+      data: links,
+    }
+  }
+
+  @Get(':id/related')
+  @DisableNSFWFilter()
+  async getRelatedGalgames(@Param('id') id: string, @Req() req: RequestWithUser) {
+    const relatedGalgames = await this.galgameService.getRelatedGalgames(id, req)
+    return {
+      data: relatedGalgames,
     }
   }
 }

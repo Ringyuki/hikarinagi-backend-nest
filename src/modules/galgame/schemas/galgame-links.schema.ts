@@ -16,7 +16,7 @@ export class LinkMeta {
   value: string
 }
 
-@Schema({ _id: false })
+@Schema()
 export class LinkDetail {
   _id?: Types.ObjectId
 
@@ -44,7 +44,16 @@ export class LinkDetail {
   createdAt: Date
 }
 
-@Schema({ timestamps: true })
+@Schema({
+  timestamps: true,
+  toJSON: {
+    transform: (_, ret) => {
+      delete ret._id
+      delete ret.__v
+      return ret
+    },
+  },
+})
 export class GalgameLinks {
   @Prop({
     type: String,
@@ -76,36 +85,6 @@ export const GalgameLinksSchema = SchemaFactory.createForClass(GalgameLinks)
 
 // 复合索引确保每个用户的每种类型链接集合唯一
 GalgameLinksSchema.index({ galId: 1, userId: 1, linkType: 1 }, { unique: true })
-
-// 添加虚拟字段：格式化后的链接详情
-GalgameLinksSchema.virtual('formattedLinks').get(function () {
-  return this.linkDetail.map(detail => {
-    const metaObj = {}
-    detail.link_meta.forEach(meta => {
-      metaObj[meta.key] = meta.value
-    })
-
-    return {
-      id: detail._id,
-      link: detail.link,
-      createdAt: detail.createdAt,
-      note: detail.note,
-      ...metaObj,
-    }
-  })
-})
-
-// 配置虚拟字段在JSON中可见
-GalgameLinksSchema.set('toJSON', {
-  virtuals: true,
-  transform: (doc, converted) => {
-    delete converted._id
-    delete converted.__v
-    return converted
-  },
-})
-
-// 链接元数据验证中间件
 GalgameLinksSchema.pre('save', function (next) {
   for (const detail of this.linkDetail) {
     if (this.linkType === 'official-link') {
