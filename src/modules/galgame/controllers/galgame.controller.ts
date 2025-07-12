@@ -22,7 +22,7 @@ export class GalgameController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string) {
+  async findById(@Param('id') id: string): Promise<{ data: any }> {
     const galgame = await this.galgameService.findById(id)
     return {
       data: galgame,

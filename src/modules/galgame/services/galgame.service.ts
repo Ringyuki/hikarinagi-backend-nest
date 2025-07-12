@@ -11,6 +11,7 @@ import * as crypto from 'crypto'
 import { HikariConfigService } from '../../../common/config/services/config.service'
 import { Article, ArticleDocument } from '../../content/schemas/article.schema'
 import { Post, PostDocument } from '../../content/schemas/post.schema'
+import { EditHistoryService } from 'src/common/services/edit-history.service'
 
 @Injectable()
 export class GalgameService {
@@ -20,6 +21,7 @@ export class GalgameService {
     @InjectModel(Article.name) private articleModel: Model<ArticleDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     private readonly hikariConfigService: HikariConfigService,
+    private readonly editHistoryService: EditHistoryService,
   ) {}
 
   async findById(id: number | string) {
@@ -58,7 +60,18 @@ export class GalgameService {
     if (!galgame) {
       throw new NotFoundException('galgame not found')
     }
-    return galgame
+
+    const { contributors, createdBy, lastEditBy } = await this.editHistoryService.getContributors(
+      'galgame',
+      galgame.galId,
+    )
+
+    return {
+      ...galgame.toJSON(),
+      contributors,
+      createdBy,
+      lastEditBy,
+    }
   }
 
   async getGalgameList(
