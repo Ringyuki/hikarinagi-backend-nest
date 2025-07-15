@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common'
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
 import { DownloadInfo, Galgame, GalgameDocument } from '../schemas/galgame.schema'
@@ -12,6 +17,9 @@ import { HikariConfigService } from '../../../common/config/services/config.serv
 import { Article, ArticleDocument } from '../../content/schemas/article.schema'
 import { Post, PostDocument } from '../../content/schemas/post.schema'
 import { EditHistoryService } from 'src/common/services/edit-history.service'
+import { BangumiAuthService } from 'src/modules/bangumi/services/bangumi-auth.service'
+import { HttpService } from '@nestjs/axios'
+import { firstValueFrom } from 'rxjs'
 
 @Injectable()
 export class GalgameService {
@@ -22,6 +30,8 @@ export class GalgameService {
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     private readonly hikariConfigService: HikariConfigService,
     private readonly editHistoryService: EditHistoryService,
+    private readonly bangumiAuthService: BangumiAuthService,
+    private readonly httpService: HttpService,
   ) {}
 
   async findById(id: number | string) {
@@ -681,5 +691,290 @@ export class GalgameService {
       relatedGalgames: filteredRelatedGalgames,
       relatedAriticles: relatedAriticles,
     }
+  }
+
+  async fetchGameDataFromBangumi(id: number | string) {
+    const token = await this.bangumiAuthService.getValidAccessToken()
+    if (!token) {
+      throw new BadRequestException('Failed to get Bangumi token')
+    }
+    if (!id || isNaN(Number(id))) {
+      throw new BadRequestException('id must be a number')
+    }
+
+    const baseUrl = 'https://api.bgm.tv/v0'
+    const headers = {
+      'User-Agent': 'trim21/bangumi-episode-ics',
+      Authorization: 'Bearer ' + token,
+    }
+
+    const endpoints = {
+      subject_info: `${baseUrl}/subjects/${id}`,
+      characters: `${baseUrl}/subjects/${id}/characters`,
+      persons: `${baseUrl}/subjects/${id}/persons`,
+    }
+
+    let [subjectInfo, characters, persons] = [null, null, null]
+    try {
+      ;[subjectInfo, characters, persons] = await Promise.all([
+        firstValueFrom(this.httpService.get(endpoints.subject_info, { headers })),
+        firstValueFrom(this.httpService.get(endpoints.characters, { headers })),
+        firstValueFrom(this.httpService.get(endpoints.persons, { headers })),
+      ])
+    } catch (error) {
+      if (error.response.status === 401 || error.response.status === 403) {
+        const newToken = await this.bangumiAuthService.refreshAccessToken()
+        if (!newToken) {
+          throw new BadRequestException('Failed to refresh Bangumi token')
+        }
+        headers.Authorization = 'Bearer ' + newToken.access_token
+        ;[subjectInfo, characters, persons] = await Promise.all([
+          firstValueFrom(this.httpService.get(endpoints.subject_info, { headers })),
+          firstValueFrom(this.httpService.get(endpoints.characters, { headers })),
+          firstValueFrom(this.httpService.get(endpoints.persons, { headers })),
+        ])
+      } else {
+        throw new InternalServerErrorException('Failed to fetch Bangumi data')
+      }
+    }
+
+    if (subjectInfo.data?.platform !== '游戏') {
+      throw new BadRequestException('The specified subject_id is not a game')
+    }
+
+    // 处理制作人员信息
+    const personDetailsResults = await Promise.allSettled(
+      persons.data.map(async person => {
+        try {
+          const personDetails = await firstValueFrom(
+            this.httpService.get(`${baseUrl}/persons/${person.id}`, {
+              headers,
+            }),
+          )
+          const personData = personDetails.data
+
+          // 从infobox中提取别名，并从labels中移除别名字段
+          const aliasesData = personData.infobox?.find(item => item.key === '别名')
+          const aliases = aliasesData?.value || []
+          const labels =
+            personData.infobox
+              ?.filter(item => item.key !== '别名')
+              ?.map(item => ({
+                key: item.key,
+                value: Array.isArray(item.value)
+                  ? item.value.map(v => v.v || v).join('、')
+                  : typeof item.value === 'object'
+                    ? item.value.v || ''
+                    : item.value || '',
+              })) || []
+
+          // 提取别名列表
+          const extractedAliases = Array.isArray(aliases)
+            ? aliases.map(alias => (typeof alias === 'string' ? alias : alias.v))
+            : [aliases].filter(Boolean)
+
+          return {
+            person: {
+              name: personData.name,
+              transName: personData.infobox?.find(item => item.key === '简体中文名')?.value || '',
+              aliases: extractedAliases,
+              intro: personData.summary || '',
+              transIntro: '',
+              image: personData.images?.large || '',
+              labels,
+            },
+            role: person.relation,
+          }
+        } catch (error) {
+          console.error(`Error processing person ${person.id}:`, error)
+          return null
+        }
+      }),
+    )
+
+    const validStaffs = personDetailsResults
+      .filter(result => result.status === 'fulfilled' && result.value)
+      .map((result: any) => result.value)
+
+    // 从staff中获取制作商信息
+    const developerStaffs = validStaffs.filter(
+      staff => staff.role === '开发' || staff.role === '发行',
+    )
+    const producers = developerStaffs.map(developerStaff => ({
+      producer: {
+        name: developerStaff.person.name,
+        aliases: developerStaff.person.aliases,
+        intro: developerStaff.person.intro,
+        transIntro: developerStaff.person.transIntro,
+        type: ['galgame', '视觉小说'],
+        country: '日本',
+        established: developerStaff.person.labels.find(label => label.key === '设立')?.value || '',
+        logo: developerStaff.person.image,
+        labels: developerStaff.person.labels,
+      },
+    }))
+
+    // 如果没有找到制作商，添加一个空的制作商对象
+    if (producers.length === 0) {
+      ;(producers as any).push({
+        producer: {
+          name: 'NOT FOUND',
+          aliases: [],
+          intro: '',
+          transIntro: '',
+          type: ['galgame', '视觉小说'],
+          country: '日本',
+          established: '',
+          logo: '',
+        },
+      })
+    }
+
+    const filteredStaffs = validStaffs.filter(
+      staff => staff.role !== '开发' && staff.role !== '发行',
+    )
+    // 根据角色ID获取所有角色详情
+    const characterDetailsResults = await Promise.allSettled(
+      characters.data.map(async chara => {
+        try {
+          const [characterDetails, actorDetails] = await Promise.all([
+            firstValueFrom(this.httpService.get(`${baseUrl}/characters/${chara.id}`, { headers })),
+            Promise.all(
+              (chara.actors || []).map(actor =>
+                firstValueFrom(
+                  this.httpService.get(`${baseUrl}/persons/${actor.id}`, { headers }),
+                ).catch(error => {
+                  console.error(`Error fetching actor ${actor.id} details:`, error)
+                  return null
+                }),
+              ),
+            ),
+          ])
+
+          const charData = characterDetails.data
+
+          // 处理角色的别名和labels
+          const charAliasesData = charData.infobox?.find(item => item.key === '别名')
+          const charAliases = charAliasesData?.value || []
+          const charLabels =
+            charData.infobox
+              ?.filter(item => item.key !== '别名')
+              ?.map(item => ({
+                key: item.key,
+                value: Array.isArray(item.value)
+                  ? item.value.map(v => v.v || v).join('、')
+                  : typeof item.value === 'object'
+                    ? item.value.v || ''
+                    : item.value || '',
+              })) || []
+
+          // 提取角色别名列表
+          const extractedCharAliases = Array.isArray(charAliases)
+            ? charAliases.map(alias => (typeof alias === 'string' ? alias : alias.v))
+            : [charAliases].filter(Boolean)
+
+          // 处理声优信息
+          const actors = chara.actors
+            ?.map((actor, index) => {
+              const actorData = actorDetails[index]?.data
+              if (!actorData) return null
+
+              // 处理声优的别名和labels
+              const actorAliasesData = actorData.infobox?.find(item => item.key === '别名')
+              const actorAliases = actorAliasesData?.value || []
+              const actorLabels =
+                actorData.infobox
+                  ?.filter(item => item.key !== '别名')
+                  ?.map(item => ({
+                    key: item.key,
+                    value: Array.isArray(item.value)
+                      ? item.value.map(v => v.v || v).join('、')
+                      : typeof item.value === 'object'
+                        ? item.value.v || ''
+                        : item.value || '',
+                  })) || []
+
+              // 提取声优别名列表
+              const extractedActorAliases = Array.isArray(actorAliases)
+                ? actorAliases.map(alias => (typeof alias === 'string' ? alias : alias.v))
+                : [actorAliases].filter(Boolean)
+
+              return {
+                name: actor.name,
+                transName: actorData.infobox?.find(item => item.key === '简体中文名')?.value || '',
+                aliases: extractedActorAliases,
+                intro: actorData.summary || '',
+                transIntro: '',
+                image: actorData.images?.large || '',
+                labels: actorLabels,
+              }
+            })
+            .filter(Boolean)
+
+          return {
+            character: {
+              name: charData.name,
+              transName: charData.infobox?.find(item => item.key === '简体中文名')?.value || '',
+              aliases: extractedCharAliases,
+              intro: charData.summary || '',
+              transIntro: '',
+              image: charData.images?.large || '',
+              labels: charLabels,
+              actors: actors || [],
+              relations: [],
+            },
+            role: chara.relation,
+          }
+        } catch (error) {
+          console.error(`Error processing character ${chara.id}:`, error)
+          return null
+        }
+      }),
+    )
+
+    const validCharacters = characterDetailsResults
+      .filter(result => result.status === 'fulfilled' && result.value)
+      .map((result: any) => result.value)
+
+    const transformedData = {
+      bangumiGameId: subjectInfo.data.id,
+      cover: subjectInfo.data.images?.large || '',
+      transTitle: subjectInfo.data.name_cn || '',
+      originTitle: [
+        subjectInfo.data.name,
+        ...(() => {
+          const aliasData = subjectInfo.data.infobox?.find(item => item.key === '别名')?.value
+          if (!aliasData) return []
+          if (Array.isArray(aliasData))
+            return aliasData.map(alias => (typeof alias === 'object' ? alias.v : alias))
+          return [typeof aliasData === 'object' ? aliasData.v : aliasData]
+        })(),
+      ].filter(Boolean),
+      producers,
+      releaseDate: (() => {
+        const date = subjectInfo.data.date || null
+        if (!date) return null
+        // 检查日期格式是否为 yyyy-mm-dd
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+        return dateRegex.test(date) ? date : null
+      })(),
+      releaseDateTBD: !subjectInfo.data.date,
+      releaseDateTBDNote: '',
+      tags:
+        subjectInfo.data.tags?.map(tag => ({
+          tag: {
+            name: tag.name,
+            aliases: [],
+            description: '',
+          },
+          likes: 0,
+        })) || [],
+      originIntro: subjectInfo.data.summary || '',
+      transIntro: '',
+      staffs: filteredStaffs,
+      characters: validCharacters,
+    }
+
+    return transformedData
   }
 }

@@ -23,9 +23,11 @@ import {
 import { Producer, ProducerSchema } from '../entities/schemas/producer.schema'
 import { Person, PersonSchema } from '../entities/schemas/person.schema'
 import { Character, CharacterSchema } from '../entities/schemas/character.schema'
+import { HttpModule } from '@nestjs/axios'
 
 @Module({
   imports: [
+    HttpModule,
     MongooseModule.forFeature([{ name: Galgame.name, schema: GalgameSchema }]),
     MongooseModule.forFeature([{ name: GalgameLinks.name, schema: GalgameLinksSchema }]),
     MongooseModule.forFeature([{ name: Article.name, schema: ArticleSchema }]),

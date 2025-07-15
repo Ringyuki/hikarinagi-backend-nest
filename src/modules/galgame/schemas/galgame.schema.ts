@@ -185,8 +185,23 @@ export class Galgame {
   @Prop({ type: [GalgameProducer] })
   producers: GalgameProducer[]
 
-  @Prop({ type: String, required: true })
+  @Prop({
+    type: String,
+    required: function () {
+      return !this.releaseDateTBD
+    },
+  })
   releaseDate: string
+
+  @Prop({ type: Boolean, required: false, default: false })
+  releaseDateTBD: boolean
+
+  @Prop({
+    type: String,
+    required: false,
+    default: '',
+  })
+  releaseDateTBDNote: string
 
   @Prop({ type: [GalgameTag] })
   tags: GalgameTag[]

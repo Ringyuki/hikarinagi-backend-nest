@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module'
 import { EmailModule } from './modules/email/email.module'
 import { SharedModule } from './modules/shared/shared.module'
 import { EntitiesModule } from './modules/entities/entities.module'
+import { BangumiModule } from './modules/bangumi/bangumi.module'
 import { RootAppModule } from './common/modules/app.module'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { TokenExtractionInterceptor } from './common/interceptors/token-extraction.interceptor'
@@ -88,6 +89,7 @@ import { GalgameModule } from './modules/galgame/galgame.module'
     // 共享模块
     SharedModule,
     EntitiesModule,
+    BangumiModule,
 
     // 应用模块
     RootAppModule,
