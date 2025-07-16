@@ -3,9 +3,10 @@ import {
   BadRequestException,
   NotFoundException,
   InternalServerErrorException,
+  ConflictException,
 } from '@nestjs/common'
-import { InjectModel } from '@nestjs/mongoose'
-import { Model } from 'mongoose'
+import { InjectConnection, InjectModel } from '@nestjs/mongoose'
+import { Connection, Model } from 'mongoose'
 import { DownloadInfo, Galgame, GalgameDocument } from '../schemas/galgame.schema'
 import { GalgameLinks, GalgameLinksDocument } from '../schemas/galgame-links.schema'
 import { RequestWithUser } from 'src/modules/auth/interfaces/request-with-user.interface'
@@ -20,6 +21,13 @@ import { EditHistoryService } from 'src/common/services/edit-history.service'
 import { BangumiAuthService } from 'src/modules/bangumi/services/bangumi-auth.service'
 import { HttpService } from '@nestjs/axios'
 import { firstValueFrom } from 'rxjs'
+import { CreateGalgameDto } from '../dto/create-galgame.dto'
+import { Tag, TagDocument } from '../../entities/schemas/tag.schema'
+import { Producer, ProducerDocument } from '../../entities/schemas/producer.schema'
+import { Person, PersonDocument } from '../../entities/schemas/person.schema'
+import { Character, CharacterDocument } from '../../entities/schemas/character.schema'
+import { CounterService } from '../../shared/services/counter.service'
+import { Types } from 'mongoose'
 
 @Injectable()
 export class GalgameService {
@@ -28,10 +36,16 @@ export class GalgameService {
     @InjectModel(GalgameLinks.name) private galgameLinksModel: Model<GalgameLinksDocument>,
     @InjectModel(Article.name) private articleModel: Model<ArticleDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    @InjectModel(Tag.name) private tagModel: Model<TagDocument>,
+    @InjectModel(Producer.name) private producerModel: Model<ProducerDocument>,
+    @InjectModel(Person.name) private personModel: Model<PersonDocument>,
+    @InjectModel(Character.name) private characterModel: Model<CharacterDocument>,
+    @InjectConnection() private readonly connection: Connection,
     private readonly hikariConfigService: HikariConfigService,
     private readonly editHistoryService: EditHistoryService,
     private readonly bangumiAuthService: BangumiAuthService,
     private readonly httpService: HttpService,
+    private readonly counterService: CounterService,
   ) {}
 
   async findById(id: number | string) {
@@ -976,5 +990,468 @@ export class GalgameService {
     }
 
     return transformedData
+  }
+
+  async createGalgame(galgame: CreateGalgameDto, req: RequestWithUser) {
+    const session = await this.connection.startSession()
+    try {
+      session.startTransaction()
+      const creator = {
+        userId: new Types.ObjectId(req.user._id),
+        name: req.user.name,
+      }
+      const existingGalgame = await this.galgameModel
+        .findOne({ bangumiGameId: galgame.bangumiGameId })
+        .session(session)
+      if (existingGalgame) {
+        throw new ConflictException(
+          `Galgame with bangumiGameId ${galgame.bangumiGameId} already exists`,
+        )
+      }
+
+      // 2. 创建/获取标签
+      const tagIds = []
+      if (galgame.tags && galgame.tags.length > 0) {
+        for (const tagData of galgame.tags) {
+          if (tagData.tag._id) {
+            tagIds.push({
+              tag: tagData.tag._id,
+              likes: tagData.likes || 0,
+            })
+            continue
+          }
+          try {
+            let tag
+            const existingTag = await this.tagModel
+              .findOne({
+                $or: [{ name: tagData.tag.name }, { aliases: tagData.tag.name }],
+              })
+              .session(session)
+            if (existingTag) {
+              tag = existingTag
+            } else {
+              const id = await this.counterService.getNextSequence('tagId')
+              const [newTag] = await this.tagModel.create(
+                [
+                  {
+                    id,
+                    name: tagData.tag.name,
+                    aliases: tagData.tag.aliases || [],
+                    description: tagData.tag.description,
+                    creator,
+                  },
+                ],
+                { session },
+              )
+              tag = newTag
+            }
+            tagIds.push({
+              tag: tag._id,
+              likes: tagData.likes || 0,
+            })
+          } catch (error) {
+            console.error('Error processing tag:', error, tagData)
+            throw error
+          }
+        }
+      }
+
+      // 3. 创建/获取制作商
+      const producerIds = []
+      if (galgame.producers && galgame.producers.length > 0) {
+        const processedProducers = []
+        for (const producerData of galgame.producers) {
+          if (processedProducers.includes(producerData.producer.name)) {
+            continue
+          }
+          if (producerData.producer._id) {
+            producerIds.push({
+              producer: producerData.producer._id,
+              note: producerData.note || '',
+            })
+            continue
+          }
+          try {
+            let prod
+            const existingProducer = await this.producerModel
+              .findOne({
+                name: producerData.producer.name,
+              })
+              .session(session)
+            if (existingProducer) {
+              prod = existingProducer
+            } else {
+              const id = await this.counterService.getNextSequence('producerId')
+              const [newProducer] = await this.producerModel.create(
+                [
+                  {
+                    id,
+                    creator,
+                    ...producerData.producer,
+                  },
+                ],
+                { session },
+              )
+              await this.editHistoryService.recordEditHistory({
+                type: 'producer',
+                actionType: 'create',
+                entityId: new Types.ObjectId(newProducer._id as unknown as string),
+                userId: new Types.ObjectId(creator.userId),
+                userName: creator.name,
+                changes: '创建了producer条目',
+                previous: null,
+                updated: newProducer.toObject(),
+              })
+              prod = newProducer
+            }
+            processedProducers.push(prod.name)
+            producerIds.push({
+              producer: prod._id,
+              note: producerData.note || '',
+            })
+          } catch (error) {
+            console.error('Error processing producer:', error, producerData)
+            throw error
+          }
+        }
+      }
+
+      // 4. 处理staff
+      const staffIds = []
+      if (galgame.staffs && galgame.staffs.length > 0) {
+        for (const staffData of galgame.staffs) {
+          if (staffData.person._id) {
+            staffIds.push({
+              person: staffData.person._id,
+              role: staffData.role || '',
+            })
+            continue
+          }
+          try {
+            let person
+            const processedLabels = staffData.person.labels.map(label => ({
+              key: label.key,
+              value: label.value || '未知',
+            }))
+
+            const existingPerson = await this.personModel
+              .findOne({
+                name: staffData.person.name,
+              })
+              .session(session)
+            const existingProducer = await this.producerModel
+              .findOne({
+                name: staffData.person.name,
+              })
+              .session(session)
+            if (existingProducer) continue
+            if (existingPerson) {
+              person = existingPerson
+            } else {
+              const id = await this.counterService.getNextSequence('personId')
+              const [newPerson] = await this.personModel.create(
+                [
+                  {
+                    id,
+                    creator,
+                    ...staffData.person,
+                    labels: processedLabels,
+                  },
+                ],
+                { session },
+              )
+              await this.editHistoryService.recordEditHistory({
+                type: 'person',
+                actionType: 'create',
+                entityId: new Types.ObjectId(newPerson._id as unknown as string),
+                userId: creator.userId,
+                userName: creator.name,
+                changes: '创建了person条目',
+                previous: null,
+                updated: newPerson.toObject(),
+              })
+              person = newPerson
+            }
+
+            staffIds.push({
+              person: person._id,
+              role: staffData.role,
+            })
+          } catch (error) {
+            console.error('Error processing staff:', error, staffData)
+            throw error
+          }
+        }
+      }
+
+      // 5. 处理角色
+      const characterLinks = []
+      if (galgame.characters && galgame.characters.length > 0) {
+        for (const characterData of galgame.characters) {
+          if (characterData.character._id) {
+            characterLinks.push({
+              character: characterData.character._id,
+              role: characterData.role || '主角',
+            })
+            continue
+          }
+          try {
+            let character
+            const processedCharacterLabels = characterData.character.labels.map(label => ({
+              key: label.key,
+              value: label.value || '未知',
+            }))
+
+            const actorIds = []
+            if (characterData.character.actors) {
+              for (const actorData of characterData.character.actors) {
+                let actor
+                const processedActorLabels = actorData.labels.map(label => ({
+                  key: label.key,
+                  value: label.value || '未知',
+                }))
+
+                const existingActor = await this.personModel
+                  .findOne({
+                    name: actorData.name,
+                  })
+                  .session(session)
+                if (existingActor) {
+                  actor = existingActor
+                } else {
+                  const id = await this.counterService.getNextSequence('personId')
+                  const [newActor] = await this.personModel.create(
+                    [
+                      {
+                        id,
+                        creator,
+                        ...actorData,
+                        labels: processedActorLabels,
+                      },
+                    ],
+                    { session },
+                  )
+                  // 记录创建历史
+                  await this.editHistoryService.recordEditHistory({
+                    type: 'person',
+                    actionType: 'create',
+                    entityId: new Types.ObjectId(newActor._id as unknown as string),
+                    userId: creator.userId,
+                    userName: creator.name,
+                    changes: '创建了person条目',
+                    previous: null,
+                    updated: newActor.toObject(),
+                  })
+                  actor = newActor
+                }
+                actorIds.push(actor._id)
+              }
+            }
+
+            const existingCharacter = await this.characterModel
+              .findOne({
+                name: characterData.character.name,
+              })
+              .session(session)
+            if (existingCharacter) {
+              character = existingCharacter
+            } else {
+              const id = await this.counterService.getNextSequence('characterId')
+              const [newCharacter] = await this.characterModel.create(
+                [
+                  {
+                    id,
+                    creator,
+                    ...characterData.character,
+                    labels: processedCharacterLabels,
+                    actors: actorIds,
+                  },
+                ],
+                { session },
+              )
+              // 记录创建历史
+              await this.editHistoryService.recordEditHistory({
+                type: 'character',
+                actionType: 'create',
+                entityId: new Types.ObjectId(newCharacter._id as unknown as string),
+                userId: creator.userId,
+                userName: creator.name,
+                changes: '创建了character条目',
+                previous: null,
+                updated: newCharacter.toObject(),
+              })
+              character = newCharacter
+            }
+
+            characterLinks.push({
+              character: character._id,
+              role: characterData.role,
+            })
+          } catch (error) {
+            console.error('Error processing character:', error, characterData)
+            throw error
+          }
+        }
+      }
+
+      // 6. 创建游戏
+      const galId = await this.counterService.getNextSequence('galId')
+      const gameData = {
+        ...req.body,
+        galId,
+        creator,
+        tags: tagIds,
+        producers: producerIds,
+        staffs: staffIds,
+        characters: characterLinks,
+        createdAt: new Date(),
+        status:
+          req.user.hikariUserGroup === 'admin' || req.user.hikariUserGroup === 'superAdmin'
+            ? 'published'
+            : 'pending',
+      }
+
+      const [newGalgame] = await this.galgameModel.create([gameData], { session })
+
+      // 7. 更新关联
+      // 更新制作商关联
+      const updatedProducerIds = new Set()
+      for (const producerObj of producerIds) {
+        if (updatedProducerIds.has(producerObj.producer.toString())) {
+          continue
+        }
+
+        const producer = await this.producerModel.findById(producerObj.producer).session(session)
+        const hasExistingWork = producer.works.some(
+          work => work.workType === 'Galgame' && work.work.equals(newGalgame._id as Types.ObjectId),
+        )
+
+        if (!hasExistingWork) {
+          await this.producerModel.findByIdAndUpdate(
+            producerObj.producer,
+            {
+              $push: {
+                works: {
+                  workType: 'Galgame',
+                  work: newGalgame._id,
+                },
+              },
+            },
+            { session },
+          )
+        }
+
+        updatedProducerIds.add(producerObj.producer.toString())
+      }
+      // 更新人物关联
+      const updatedPersonIds = new Set()
+      for (const staff of staffIds) {
+        if (updatedPersonIds.has(staff.person.toString())) {
+          continue
+        }
+        const person = await this.personModel.findById(staff.person).session(session)
+        const hasExistingWork = person.works.some(
+          work => work.workType === 'Galgame' && work.work.equals(newGalgame._id as Types.ObjectId),
+        )
+
+        if (!hasExistingWork) {
+          await this.personModel.findByIdAndUpdate(
+            staff.person,
+            {
+              $push: {
+                works: {
+                  workType: 'Galgame',
+                  work: newGalgame._id,
+                },
+              },
+            },
+            { session },
+          )
+        }
+        updatedPersonIds.add(staff.person.toString())
+      }
+      // 更新角色关联
+      const updatedCharacterIds = new Set()
+      for (const char of characterLinks) {
+        if (updatedCharacterIds.has(char.character.toString())) {
+          continue
+        }
+
+        const character = await this.characterModel.findById(char.character).session(session)
+        const hasExistingWork = character.works.some(
+          work => work.workType === 'Galgame' && work.work.equals(newGalgame._id as Types.ObjectId),
+        )
+
+        if (!hasExistingWork) {
+          await this.characterModel.findByIdAndUpdate(
+            char.character,
+            {
+              $push: {
+                works: {
+                  workType: 'Galgame',
+                  work: newGalgame._id,
+                },
+              },
+            },
+            { session },
+          )
+        }
+
+        updatedCharacterIds.add(char.character.toString())
+        // 更新角色声优关联
+        if (character.actors && character.actors.length > 0) {
+          for (const actorId of character.actors) {
+            if (updatedPersonIds.has(actorId.toString())) {
+              continue
+            }
+            const actor = await this.personModel.findById(actorId).session(session)
+            const hasExistingActorWork = actor.works.some(
+              work =>
+                work.workType === 'Galgame' && work.work.equals(newGalgame._id as Types.ObjectId),
+            )
+
+            if (!hasExistingActorWork) {
+              await this.personModel.findByIdAndUpdate(
+                actorId,
+                {
+                  $push: {
+                    works: {
+                      workType: 'Galgame',
+                      work: newGalgame._id,
+                    },
+                  },
+                },
+                { session },
+              )
+            }
+
+            updatedPersonIds.add(actorId.toString())
+          }
+        }
+      }
+
+      // 8. 记录历史
+      await this.editHistoryService.recordEditHistory({
+        type: 'galgame',
+        actionType: 'create',
+        galId: galId.toString(),
+        userId: new Types.ObjectId(req.user._id),
+        userName: req.user.name,
+        changes: '创建了游戏条目',
+        previous: null,
+        updated: newGalgame,
+      })
+
+      await session.commitTransaction()
+
+      return {
+        galId: newGalgame.galId,
+      }
+    } catch (error) {
+      await session.abortTransaction()
+      throw error
+    } finally {
+      session.endSession()
+    }
   }
 }

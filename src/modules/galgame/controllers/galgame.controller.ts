@@ -8,6 +8,7 @@ import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
 import { RolesGuard } from '../../auth/guards/roles.guard'
 import { DownloadAuthDto } from '../dto/download-auth.dto'
 import { DisableNSFWFilter } from '../../auth/decorators/disable-nsfw-filter.decorator'
+import { CreateGalgameDto } from '../dto/create-galgame.dto'
 
 @Controller('galgame')
 export class GalgameController {
@@ -79,6 +80,16 @@ export class GalgameController {
     const bangumiData = await this.galgameService.fetchGameDataFromBangumi(id)
     return {
       data: bangumiData,
+    }
+  }
+
+  @Post('create')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(HikariUserGroup.CREATOR)
+  async createGalgame(@Body() body: CreateGalgameDto, @Req() req: RequestWithUser) {
+    const galgame = await this.galgameService.createGalgame(body, req)
+    return {
+      data: galgame,
     }
   }
 }

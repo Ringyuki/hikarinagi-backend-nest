@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common'
-import { ConfigModule, ConfigService } from '@nestjs/config'
+import { ConfigModule } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { MongooseModule } from '@nestjs/mongoose'
 import { CacheModule } from '@nestjs/cache-manager'
@@ -43,9 +43,9 @@ import { GalgameModule } from './modules/galgame/galgame.module'
     // 数据库模块
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('database.uri'),
+      inject: [HikariConfigService],
+      useFactory: async (configService: HikariConfigService) => ({
+        uri: configService.get('database.uri'),
       }),
     }),
 
@@ -53,11 +53,11 @@ import { GalgameModule } from './modules/galgame/galgame.module'
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => {
-        const host = configService.get<string>('redis.host')
-        const port = configService.get<number>('redis.port')
-        const password = configService.get<string>('redis.password')
+      inject: [HikariConfigService],
+      useFactory: async (configService: HikariConfigService) => {
+        const host = configService.get('redis.host')
+        const port = configService.get('redis.port')
+        const password = configService.get('redis.password')
 
         return {
           store: await redisStore({

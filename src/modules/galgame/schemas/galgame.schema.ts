@@ -5,6 +5,9 @@ import { Document, Types } from 'mongoose'
 export class GalgameProducer {
   @Prop({ type: Types.ObjectId, ref: 'Producer' })
   producer: Types.ObjectId
+
+  @Prop({ type: String, default: '' })
+  note: string
 }
 
 @Schema({ _id: false })
@@ -154,7 +157,7 @@ export class GalgameCreator {
       delete ret.createdAt
       delete ret.updatedAt
       delete ret.creator
-      ret.downloadable = ret.downloadInfo.downloadable
+      ret.downloadable = ret.downloadInfo.downloadable || false
       delete ret.downloadInfo
       return ret
     },
@@ -227,7 +230,7 @@ export class Galgame {
   @Prop({ type: Boolean, default: false })
   locked: boolean
 
-  @Prop({ type: DownloadInfo })
+  @Prop({ type: DownloadInfo, default: { downloadable: false } })
   downloadInfo: DownloadInfo
 
   @Prop({

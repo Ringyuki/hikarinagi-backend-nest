@@ -126,7 +126,7 @@ export class EditHistoryService {
           galId,
           actionType,
           userId,
-          userName,
+          name: userName,
           changes,
           detailedChanges,
         })
@@ -137,7 +137,7 @@ export class EditHistoryService {
           novelId,
           actionType,
           userId,
-          userName,
+          name: userName,
           changes,
           detailedChanges,
         })
@@ -148,7 +148,7 @@ export class EditHistoryService {
           volumeId,
           actionType,
           userId,
-          userName,
+          name: userName,
           changes,
           detailedChanges,
         })
