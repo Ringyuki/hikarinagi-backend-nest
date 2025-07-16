@@ -10,8 +10,8 @@ import { Connection, Model } from 'mongoose'
 import { DownloadInfo, Galgame, GalgameDocument } from '../schemas/galgame.schema'
 import { GalgameLinks, GalgameLinksDocument } from '../schemas/galgame-links.schema'
 import { RequestWithUser } from 'src/modules/auth/interfaces/request-with-user.interface'
-import * as mongoose from 'mongoose'
 import { GetGalgameListDto } from '../dto/get-galgame-list.dto'
+import { UpdateGalgameCoverAndImagesDto } from '../dto/update-galgame.dto'
 import { PaginatedResult } from 'src/common/interfaces/paginated-result.interface'
 import * as crypto from 'crypto'
 import { HikariConfigService } from '../../../common/config/services/config.service'
@@ -48,7 +48,7 @@ export class GalgameService {
     private readonly counterService: CounterService,
   ) {}
 
-  async findById(id: number | string) {
+  async findById(id: string) {
     if (isNaN(Number(id))) {
       throw new BadRequestException('id must be a number')
     }
@@ -166,10 +166,10 @@ export class GalgameService {
     const tagsMatch = {}
     if (tagsField) {
       if (Array.isArray(tagsField) && tagsField.length > 0) {
-        const tagIds = tagsField.map(tag => new mongoose.Types.ObjectId(String(tag)))
+        const tagIds = tagsField.map(tag => new Types.ObjectId(String(tag)))
         tagsMatch['tags.tag'] = { $in: tagIds }
       } else if (typeof tagsField === 'string') {
-        tagsMatch['tags.tag'] = new mongoose.Types.ObjectId(tagsField)
+        tagsMatch['tags.tag'] = new Types.ObjectId(tagsField as string)
       }
     }
 
@@ -307,7 +307,7 @@ export class GalgameService {
     }
   }
 
-  async getDownloadInfo(id: number | string): Promise<DownloadInfo> {
+  async getDownloadInfo(id: string): Promise<DownloadInfo> {
     if (isNaN(Number(id))) {
       throw new BadRequestException('id must be a number')
     }
@@ -352,7 +352,7 @@ export class GalgameService {
     }
   }
 
-  async getGameLinks(id: number | string) {
+  async getGameLinks(id: string) {
     if (isNaN(Number(id))) {
       throw new BadRequestException('id must be a number')
     }
@@ -406,7 +406,7 @@ export class GalgameService {
     return groupedLinks
   }
 
-  async getRelatedGalgames(id: number | string, req: RequestWithUser) {
+  async getRelatedGalgames(id: string, req: RequestWithUser) {
     if (isNaN(Number(id))) {
       throw new BadRequestException('id must be a number')
     }
@@ -605,7 +605,7 @@ export class GalgameService {
 
     relatedAriticles.push(...directedRelatedArticles)
 
-    const targetWorkId = new mongoose.Types.ObjectId(String(gal_id))
+    const targetWorkId = new Types.ObjectId(String(gal_id))
     const sectionRelatedArticles = await this.articleModel.aggregate([
       {
         $match: {
@@ -1452,6 +1452,50 @@ export class GalgameService {
       throw error
     } finally {
       session.endSession()
+    }
+  }
+
+  async updateGalgameCoverAndImages(
+    id: string,
+    data: UpdateGalgameCoverAndImagesDto,
+    req: RequestWithUser,
+  ) {
+    if (isNaN(Number(id))) {
+      throw new BadRequestException('id must be a number')
+    }
+
+    const galgame = await this.galgameModel.findOne({ galId: id })
+    if (!galgame) {
+      throw new NotFoundException('Galgame not found')
+    }
+    const previous = await this.galgameModel.findById(galgame._id)
+
+    const { cover, images, headCover } = data
+    galgame.cover = cover
+    galgame.images = images
+    galgame.headCover = headCover
+    galgame.status =
+      req.user.hikariUserGroup === 'admin' || req.user.hikariUserGroup === 'superAdmin'
+        ? 'published'
+        : 'pending'
+    await galgame.save()
+
+    await this.editHistoryService.recordEditHistory({
+      type: 'galgame',
+      actionType: 'update',
+      galId: galgame.galId,
+      userId: new Types.ObjectId(req.user._id),
+      userName: req.user.name,
+      changes: '更新了游戏封面和图片',
+      previous: previous,
+      updated: galgame,
+    })
+
+    return {
+      galId: galgame.galId,
+      cover: galgame.cover,
+      images: galgame.images,
+      headCover: galgame.headCover,
     }
   }
 }

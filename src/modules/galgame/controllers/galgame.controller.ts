@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query, Req, Body, UseGuards } from '@nestjs/common'
+import { Controller, Get, Post, Put, Param, Query, Req, Body, UseGuards } from '@nestjs/common'
 import { Roles } from '../../auth/decorators/roles.decorator'
 import { GalgameService } from '../services/galgame.service'
 import { GetGalgameListDto } from '../dto/get-galgame-list.dto'
@@ -9,6 +9,7 @@ import { RolesGuard } from '../../auth/guards/roles.guard'
 import { DownloadAuthDto } from '../dto/download-auth.dto'
 import { DisableNSFWFilter } from '../../auth/decorators/disable-nsfw-filter.decorator'
 import { CreateGalgameDto } from '../dto/create-galgame.dto'
+import { UpdateGalgameCoverAndImagesDto } from '../dto/update-galgame.dto'
 
 @Controller('galgame')
 export class GalgameController {
@@ -88,6 +89,20 @@ export class GalgameController {
   @Roles(HikariUserGroup.CREATOR)
   async createGalgame(@Body() body: CreateGalgameDto, @Req() req: RequestWithUser) {
     const galgame = await this.galgameService.createGalgame(body, req)
+    return {
+      data: galgame,
+    }
+  }
+
+  @Put(':id/update-cover-and-images')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(HikariUserGroup.CREATOR)
+  async updateGalgameCoverAndImages(
+    @Param('id') id: string,
+    @Body() body: UpdateGalgameCoverAndImagesDto,
+    @Req() req: RequestWithUser,
+  ) {
+    const galgame = await this.galgameService.updateGalgameCoverAndImages(id, body, req)
     return {
       data: galgame,
     }
