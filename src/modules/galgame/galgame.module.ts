@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common'
 import { GalgameService } from './services/galgame.service'
+import { GalgameLinsService } from './services/galgame-lins.service'
 import { GalgameController } from './controllers/galgame.controller'
+import { GalgameLinksController } from './controllers/galgame-links.controller'
 import { Galgame, GalgameSchema } from './schemas/galgame.schema'
 import { MongooseModule } from '@nestjs/mongoose'
 import { GalgameLinks, GalgameLinksSchema } from './schemas/galgame-links.schema'
@@ -46,7 +48,7 @@ import { HttpModule } from '@nestjs/axios'
     MongooseModule.forFeature([{ name: Character.name, schema: CharacterSchema }]),
     MongooseModule.forFeature([{ name: Tag.name, schema: TagSchema }]),
   ],
-  controllers: [GalgameController],
-  providers: [GalgameService, EditHistoryService],
+  controllers: [GalgameController, GalgameLinksController],
+  providers: [GalgameService, GalgameLinsService, EditHistoryService],
 })
 export class GalgameModule {}

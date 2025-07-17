@@ -1,30 +1,78 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common'
-import { Response } from 'express'
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common'
+import { Response, Request } from 'express'
 import { ApiResponse } from '../interfaces/response.interface'
 
-@Catch(HttpException)
+@Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
-  catch(exception: HttpException, host: ArgumentsHost) {
+  private readonly logger = new Logger(HttpExceptionFilter.name)
+
+  catch(exception: HttpException | Error, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
     const response = ctx.getResponse<Response>()
-    const status = exception.getStatus()
-    const exceptionResponse = exception.getResponse() as string | { message: string | string[] }
+    const request = ctx.getRequest<Request>()
 
+    let status: number
     let message: string
-    if (typeof exceptionResponse === 'string') {
-      message = exceptionResponse
+
+    if (exception instanceof HttpException) {
+      status = exception.getStatus()
+      const exceptionResponse = exception.getResponse() as string | { message: string | string[] }
+
+      if (typeof exceptionResponse === 'string') {
+        message = exceptionResponse
+      } else if (typeof exceptionResponse === 'object' && exceptionResponse.message) {
+        message = Array.isArray(exceptionResponse.message)
+          ? exceptionResponse.message.join('; ')
+          : exceptionResponse.message
+      } else {
+        message = '请求发生错误'
+      }
     } else {
-      message = Array.isArray(exceptionResponse.message)
-        ? exceptionResponse.message[0]
-        : exceptionResponse.message
+      status = HttpStatus.INTERNAL_SERVER_ERROR
+      message = '服务器内部错误'
+    }
+
+    const errorLog = {
+      timestamp: new Date().toISOString(),
+      method: request.method,
+      url: request.url,
+      status,
+      message,
+      userAgent: request.get('user-agent'),
+      ip: request.ip,
+      ...(process.env.NODE_ENV === 'development' && {
+        stack: exception.stack,
+        body: request.body,
+        params: request.params,
+        query: request.query,
+      }),
+    }
+
+    if (status >= 500) {
+      this.logger.error('服务器错误', errorLog)
+    } else if (status >= 400) {
+      this.logger.warn('客户端错误', errorLog)
     }
 
     const responseBody: ApiResponse<null> = {
       success: false,
       code: status,
+      version: 'v2 dev',
       message: message || '请求发生错误',
       data: null,
       timestamp: Date.now(),
+      // 开发环境返回错误堆栈
+      ...(process.env.NODE_ENV === 'development' && {
+        // stack: exception.stack,
+        path: request.url,
+      }),
     }
 
     response.status(status).json(responseBody)

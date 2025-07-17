@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Param, Query, Req, Body, UseGuards } from '@nestjs/common'
 import { Roles } from '../../auth/decorators/roles.decorator'
 import { GalgameService } from '../services/galgame.service'
+import { GalgameLinsService } from '../services/galgame-lins.service'
 import { GetGalgameListDto } from '../dto/get-galgame-list.dto'
 import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
@@ -13,7 +14,10 @@ import { UpdateGalgameCoverAndImagesDto } from '../dto/update-galgame.dto'
 
 @Controller('galgame')
 export class GalgameController {
-  constructor(private readonly galgameService: GalgameService) {}
+  constructor(
+    private readonly galgameService: GalgameService,
+    private readonly galgameLinsService: GalgameLinsService,
+  ) {}
 
   @Get('list')
   async getGalgameList(@Query() query: GetGalgameListDto, @Req() req: RequestWithUser) {
@@ -59,7 +63,7 @@ export class GalgameController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(HikariUserGroup.USER)
   async getGameLinks(@Param('id') id: string) {
-    const links = await this.galgameService.getGameLinks(id)
+    const links = await this.galgameLinsService.getLinks(id)
     return {
       data: links,
     }

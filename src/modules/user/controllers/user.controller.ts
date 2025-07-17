@@ -1,4 +1,15 @@
-import { Controller, Post, Body, Get, Param, UseGuards, Request, Headers } from '@nestjs/common'
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  UseGuards,
+  Request,
+  Headers,
+  HttpStatus,
+  HttpCode,
+} from '@nestjs/common'
 import { UserService } from '../services/user.service'
 import { VerificationForSignupDto, CreateUserDto, LoginUserDto, RefreshTokenDto } from '../dto/user'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
@@ -30,6 +41,7 @@ export class UserController {
   }
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   async login(@Body() loginUserDto: LoginUserDto, @Headers('user-agent') userAgent: string) {
     const result = await this.userService.login(loginUserDto, userAgent)
     return {

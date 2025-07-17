@@ -5,7 +5,7 @@ import {
   IsNumber,
   IsBoolean,
   ValidateNested,
-  IsEnum,
+  IsIn,
 } from 'class-validator'
 import { Type } from 'class-transformer'
 
@@ -364,6 +364,6 @@ export class CreateGalgameDto {
   locked?: boolean
 
   @IsOptional()
-  @IsEnum(['pending', 'published', 'rejected', 'deleted', 'draft'])
+  @IsIn(['pending', 'published', 'rejected', 'deleted', 'draft'])
   status?: string
 }

@@ -16,7 +16,7 @@ export class LinkMeta {
   value: string
 }
 
-@Schema()
+@Schema({ timestamps: true })
 export class LinkDetail {
   _id?: Types.ObjectId
 

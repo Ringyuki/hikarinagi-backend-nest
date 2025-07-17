@@ -352,60 +352,6 @@ export class GalgameService {
     }
   }
 
-  async getGameLinks(id: string) {
-    if (isNaN(Number(id))) {
-      throw new BadRequestException('id must be a number')
-    }
-
-    const galgame = await this.galgameModel.findOne({
-      galId: String(id),
-      status: 'published',
-    })
-    if (!galgame) {
-      throw new NotFoundException('galgame not found')
-    }
-
-    const links = await this.galgameLinksModel
-      .find({
-        galId: galgame._id,
-      })
-      .populate('userId', 'name avatar userId')
-
-    if (!links || links.length === 0) {
-      return []
-    }
-
-    const transformedLinks = links.map(linkDoc => {
-      const linkDetails = linkDoc.linkDetail.map(detail => {
-        const metaObj = {}
-        detail.link_meta.forEach(meta => {
-          metaObj[meta.key] = meta.value
-        })
-
-        return {
-          id: detail._id,
-          link: detail.link,
-          note: detail.note,
-          createdAt: detail.createdAt,
-          ...metaObj,
-        }
-      })
-
-      return {
-        userId: linkDoc.userId,
-        linkType: linkDoc.linkType,
-        links: linkDetails,
-      }
-    })
-
-    const groupedLinks = {
-      officialLinks: transformedLinks.filter(l => l.linkType === 'official-link'),
-      downloadLinks: transformedLinks.filter(l => l.linkType === 'download-link'),
-    }
-
-    return groupedLinks
-  }
-
   async getRelatedGalgames(id: string, req: RequestWithUser) {
     if (isNaN(Number(id))) {
       throw new BadRequestException('id must be a number')
