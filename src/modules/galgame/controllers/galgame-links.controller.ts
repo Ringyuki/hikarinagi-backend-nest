@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpStatus,
   HttpCode,
+  Query,
 } from '@nestjs/common'
 import { Roles } from '../../auth/decorators/roles.decorator'
 import { GalgameLinsService } from '../services/galgame-lins.service'
@@ -52,9 +53,9 @@ export class GalgameLinksController {
   async deleteLink(
     @Param('galgame_id') galgame_id: string,
     @Param('link_id') link_id: string,
-    @Body() body: DeleteGalgameLinkDto,
+    @Query() query: DeleteGalgameLinkDto,
     @Req() req: RequestWithUser,
   ) {
-    await this.galgameLinsService.deleteLink(galgame_id, link_id, body, req)
+    await this.galgameLinsService.deleteLink(galgame_id, link_id, query, req)
   }
 }

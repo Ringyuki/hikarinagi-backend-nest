@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator'
+import { IsString, IsNumber, IsNotEmpty, IsOptional, IsEnum, Min } from 'class-validator'
+import { Type } from 'class-transformer'
 
 enum GalgameLinkType {
   OFFICIAL_LINK = 'official-link',
@@ -8,9 +9,59 @@ enum GalgameLinkType {
 enum DownloadType {
   GAME = 'game',
   PATCH = 'patch',
-  VOICE = 'voice',
-  MUSIC = 'music',
+  SAVE = 'save',
+  CG = 'cg',
+  OST = 'ost',
   OTHER = 'other',
+}
+
+enum DownloadLinkType {
+  BAIDU = 'baidu',
+  QUARK = 'quark',
+  ALI = 'ali',
+  PAN123 = '123pan',
+  ONEDRIVE = 'onedrive',
+  MEGA = 'mega',
+  TORRENT = 'torrent',
+  MAGNET = 'magnet',
+  OTHER = 'other',
+}
+
+enum OfficialLinkPlatform {
+  STEAM = 'steam',
+  DLSITE = 'dlsite',
+  FANZA = 'fanza',
+  GETCHU = 'getchu',
+  OFFICIAL = 'official',
+  OTHER = 'other',
+}
+
+enum Platform {
+  WINDOWS = 'windows',
+  MAC = 'mac',
+  LINUX = 'linux',
+  ANDROID = 'android',
+  IOS = 'ios',
+  PS = 'ps',
+  PSV = 'psv',
+  PSP = 'psp',
+  SWITCH = 'switch',
+  XBOX = 'xbox',
+  OTHER = 'other',
+}
+
+enum Language {
+  CN = 'cn',
+  TW = 'tw',
+  JP = 'jp',
+  EN = 'en',
+  OTHER = 'other',
+}
+
+enum SizeFormat {
+  MB = 'MB',
+  GB = 'GB',
+  TB = 'TB',
 }
 
 export class UpdateGalgameLinkDto {
@@ -20,7 +71,7 @@ export class UpdateGalgameLinkDto {
 
   @IsEnum(GalgameLinkType)
   @IsNotEmpty()
-  linkType: string
+  linkType: GalgameLinkType
 
   @IsString()
   @IsNotEmpty()
@@ -33,29 +84,44 @@ export class UpdateGalgameLinkDto {
   @IsString()
   @IsEnum(DownloadType)
   @IsOptional()
-  type: string
+  downloadType: DownloadType
+
+  @IsString()
+  @IsEnum(DownloadLinkType)
+  @IsOptional()
+  downloadLinkType: DownloadLinkType
+
+  @IsNumber()
+  @Min(0, { message: 'size must be greater than or equal to 0' })
+  @Type(() => Number)
+  @IsOptional()
+  size: number
+
+  @IsString()
+  @IsEnum(SizeFormat)
+  @IsOptional()
+  sizeFormat: SizeFormat
+
+  @IsString()
+  @IsEnum(Language)
+  @IsOptional()
+  language: Language
+
+  @IsString()
+  @IsEnum(Platform)
+  @IsOptional()
+  platform: Platform
+
+  @IsString()
+  @IsEnum(OfficialLinkPlatform)
+  @IsOptional()
+  officialLinkPlatform: OfficialLinkPlatform
 
   @IsString()
   @IsOptional()
-  download_type: string
+  linkPassword: string
 
   @IsString()
   @IsOptional()
-  size: string
-
-  @IsString()
-  @IsOptional()
-  language: string
-
-  @IsString()
-  @IsOptional()
-  platform: string
-
-  @IsString()
-  @IsOptional()
-  password: string
-
-  @IsString()
-  @IsOptional()
-  unzip_password: string
+  unzipPassword: string
 }

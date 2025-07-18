@@ -17,9 +17,15 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
     }
     return next.handle().pipe(
       map(data => {
+        const response = context.switchToHttp().getResponse()
+        const statusCode = response.statusCode
+
+        if (statusCode === HttpStatus.NO_CONTENT || data === undefined || data === null) {
+          return null
+        }
         return {
           success: true,
-          code: data.code || HttpStatus.OK,
+          code: data?.code || statusCode || HttpStatus.OK,
           version: 'v2 dev',
           message: data.message || '',
           data: data.data,

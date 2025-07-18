@@ -113,14 +113,14 @@ export class GalgameLinsService {
 
     let galgameLinks = await this.galgameLinksModel.findOne({
       galId: galgame._id,
-      userId,
+      userId: new Types.ObjectId(userId),
       linkType,
     })
 
     if (!galgameLinks) {
       galgameLinks = new this.galgameLinksModel({
         galId: galgame._id,
-        userId,
+        userId: new Types.ObjectId(userId),
         linkType,
         linkDetail: [],
       })
@@ -167,7 +167,7 @@ export class GalgameLinsService {
     if (link.linkType === 'official-link') {
       link_meta.push({
         key: 'platform',
-        value: linkDetail.platform,
+        value: linkDetail.officialLinkPlatform,
       })
       link.linkDetail = link.linkDetail.map(detail => {
         if (detail._id.toString() === link_id) {
@@ -182,24 +182,24 @@ export class GalgameLinsService {
       })
     } else {
       link_meta.push(
-        { key: 'type', value: linkDetail.type || '' },
-        { key: 'size', value: linkDetail.size || '' },
-        { key: 'download_type', value: linkDetail.download_type || '' },
+        { key: 'type', value: linkDetail.downloadType || '' },
+        { key: 'size', value: linkDetail.size + linkDetail.sizeFormat || '' },
+        { key: 'download_type', value: linkDetail.downloadLinkType || '' },
       )
 
-      if (linkDetail.download_type) {
+      if (linkDetail.downloadType) {
         link_meta.push({ key: 'language', value: linkDetail.language || '' })
       }
 
-      if (linkDetail.download_type) {
+      if (linkDetail.downloadType) {
         link_meta.push({ key: 'platform', value: linkDetail.platform || '' })
       }
 
-      if (linkDetail.password) {
-        link_meta.push({ key: 'password', value: linkDetail.password || '' })
+      if (linkDetail.linkPassword) {
+        link_meta.push({ key: 'password', value: linkDetail.linkPassword })
       }
-      if (linkDetail.unzip_password) {
-        link_meta.push({ key: 'unzip_password', value: linkDetail.unzip_password || '' })
+      if (linkDetail.unzipPassword) {
+        link_meta.push({ key: 'unzip_password', value: linkDetail.unzipPassword })
       }
     }
     link.linkDetail = link.linkDetail.map(detail => {
@@ -244,6 +244,10 @@ export class GalgameLinsService {
       throw new NotFoundException('link detail not found')
     }
     link.linkDetail = link.linkDetail.filter(detail => detail._id.toString() !== link_id)
-    await link.save()
+    if (link.linkDetail.length === 0) {
+      await link.deleteOne() // 如果linkDetail为空，则删除整个link
+    } else {
+      await link.save()
+    }
   }
 }

@@ -17,21 +17,59 @@ enum GalgameLinkType {
 enum DownloadType {
   GAME = 'game',
   PATCH = 'patch',
-  VOICE = 'voice',
-  MUSIC = 'music',
+  SAVE = 'save',
+  CG = 'cg',
+  OST = 'ost',
   OTHER = 'other',
 }
 
-enum SizeFormat {
-  KB = 'KB',
-  MB = 'MB',
-  GB = 'GB',
+enum DownloadLinkType {
+  BAIDU = 'baidu',
+  QUARK = 'quark',
+  ALI = 'ali',
+  PAN123 = '123pan',
+  ONEDRIVE = 'onedrive',
+  MEGA = 'mega',
+  TORRENT = 'torrent',
+  MAGNET = 'magnet',
+  OTHER = 'other',
+}
+
+enum OfficialLinkPlatform {
+  STEAM = 'steam',
+  DLSITE = 'dlsite',
+  FANZA = 'fanza',
+  GETCHU = 'getchu',
+  OFFICIAL = 'official',
+  OTHER = 'other',
+}
+
+enum Platform {
+  WINDOWS = 'windows',
+  MAC = 'mac',
+  LINUX = 'linux',
+  ANDROID = 'android',
+  IOS = 'ios',
+  PS = 'ps',
+  PSV = 'psv',
+  PSP = 'psp',
+  SWITCH = 'switch',
+  XBOX = 'xbox',
+  OTHER = 'other',
 }
 
 enum Language {
   CN = 'cn',
+  TW = 'tw',
   JP = 'jp',
   EN = 'en',
+  OTHER = 'other',
+}
+
+enum SizeFormat {
+  MB = 'MB',
+  GB = 'GB',
+  TB = 'TB',
 }
 
 export class CreateGalgameLinkDto {
@@ -41,7 +79,7 @@ export class CreateGalgameLinkDto {
 
   @IsEnum(GalgameLinkType)
   @IsNotEmpty()
-  linkType: string
+  linkType: GalgameLinkType
 
   @IsString()
   @IsUrl({}, { message: 'link must be a valid URL' })
@@ -59,7 +97,7 @@ export class CreateGalgameLinkDto {
   @IsString()
   @IsOptional()
   @IsEnum(DownloadType)
-  downloadType?: string
+  downloadType?: DownloadType
 
   @IsNumber()
   @Min(0, { message: 'size must be greater than or equal to 0' })
@@ -84,16 +122,16 @@ export class CreateGalgameLinkDto {
 
   @IsString()
   @IsOptional()
-  downloadLinkType?: string
+  downloadLinkType?: DownloadLinkType
 
   @IsString()
   @IsEnum(Language)
   @IsOptional()
-  language?: string
+  language?: Language
 
   @IsString()
   @IsOptional()
-  platform?: string
+  platform?: Platform | OfficialLinkPlatform
 
   @IsString()
   @IsOptional()
