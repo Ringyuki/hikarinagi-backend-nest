@@ -31,7 +31,7 @@ export class NSFWFilterInterceptor implements NestInterceptor {
           const serializedData = JSON.parse(JSON.stringify(data))
           const filteredData = this.filterNSFWContent(serializedData)
 
-          // 检查是否被过滤了
+          // 如果数据被完全过滤为空，抛出异常
           if (this.isContentFiltered(serializedData, filteredData)) {
             throw new ContentFilteredException()
           }
@@ -53,7 +53,7 @@ export class NSFWFilterInterceptor implements NestInterceptor {
 
     // 如果是对象
     if (typeof data === 'object' && data !== null) {
-      // 检查是否为分页结果格式 (PaginatedResult)
+      // 如果是分页结果
       if (data.items && Array.isArray(data.items) && data.meta) {
         const filteredItems = data.items
           .filter((item: any) => !item?.nsfw)
@@ -79,7 +79,7 @@ export class NSFWFilterInterceptor implements NestInterceptor {
         return null
       }
 
-      // 递归过滤对象中的NSFW内容
+      // 递归过滤对象中的NSFW内容（如果有）
       const filtered = { ...data }
       Object.keys(filtered).forEach(key => {
         filtered[key] = this.filterNSFWContent(filtered[key])
@@ -97,19 +97,19 @@ export class NSFWFilterInterceptor implements NestInterceptor {
       return true
     }
 
-    // 检查数组长度是否变化
+    // 检查数组是否被完全过滤为空（只有完全为空才抛出异常）
     if (Array.isArray(original.data) && Array.isArray(filtered.data)) {
-      return original.data.items.length !== filtered.data.items.length
+      return original.data.length > 0 && filtered.data.length === 0
     }
 
-    // 检查分页结果是否被过滤
+    // 检查分页结果是否被完全过滤为空（只有完全为空才抛出异常）
     if (
       original?.data?.items &&
       filtered?.data?.items &&
       Array.isArray(original.data.items) &&
       Array.isArray(filtered.data.items)
     ) {
-      return original.data.items.length !== filtered.data.items.length
+      return original.data.items.length > 0 && filtered.data.items.length === 0
     }
 
     return false

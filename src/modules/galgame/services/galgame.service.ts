@@ -8,7 +8,6 @@ import {
 import { InjectConnection, InjectModel } from '@nestjs/mongoose'
 import { Connection, Model } from 'mongoose'
 import { DownloadInfo, Galgame, GalgameDocument } from '../schemas/galgame.schema'
-import { GalgameLinks, GalgameLinksDocument } from '../schemas/galgame-links.schema'
 import { RequestWithUser } from 'src/modules/auth/interfaces/request-with-user.interface'
 import { GetGalgameListDto } from '../dto/get-galgame-list.dto'
 import { UpdateGalgameCoverAndImagesDto } from '../dto/update-galgame.dto'
@@ -28,12 +27,12 @@ import { Person, PersonDocument } from '../../entities/schemas/person.schema'
 import { Character, CharacterDocument } from '../../entities/schemas/character.schema'
 import { CounterService } from '../../shared/services/counter.service'
 import { Types } from 'mongoose'
+import { GetGalgameMonthlyReleasesDto } from '../dto/get-galgame-monthly-releases.dto'
 
 @Injectable()
 export class GalgameService {
   constructor(
     @InjectModel(Galgame.name) private galgameModel: Model<GalgameDocument>,
-    @InjectModel(GalgameLinks.name) private galgameLinksModel: Model<GalgameLinksDocument>,
     @InjectModel(Article.name) private articleModel: Model<ArticleDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @InjectModel(Tag.name) private tagModel: Model<TagDocument>,
@@ -305,6 +304,125 @@ export class GalgameService {
         currentPage: page,
       },
     }
+  }
+
+  async getGalgameMonthlyReleases(query: GetGalgameMonthlyReleasesDto) {
+    const { year, month } = query
+
+    const monthStr = month < 10 ? `0${month}` : `${month}`
+    const startDateStr = `${year}-${monthStr}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const endDateStr = `${year}-${monthStr}-${lastDay}`
+
+    const matchStage = {
+      releaseDate: {
+        $gte: startDateStr,
+        $lte: endDateStr,
+      },
+      status: 'published',
+    }
+
+    const games = await this.galgameModel.aggregate([
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: 'rates',
+          localField: '_id',
+          foreignField: 'fromId',
+          pipeline: [{ $match: { from: 'Galgame', isDeleted: false } }],
+          as: 'rates',
+        },
+      },
+      {
+        $lookup: {
+          from: 'producers',
+          localField: 'producers.producer',
+          foreignField: '_id',
+          as: 'producerData',
+        },
+      },
+      {
+        $lookup: {
+          from: 'tags',
+          localField: 'tags.tag',
+          foreignField: '_id',
+          as: 'tagData',
+        },
+      },
+      {
+        $addFields: {
+          avgRate: {
+            $cond: {
+              if: { $gt: [{ $size: '$rates' }, 0] },
+              then: { $avg: '$rates.rate' },
+              else: null,
+            },
+          },
+          rateCount: { $size: '$rates' },
+          producers: {
+            $map: {
+              input: '$producers',
+              as: 'prod',
+              in: {
+                producer: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: '$producerData',
+                        as: 'p',
+                        cond: { $eq: ['$$p._id', '$$prod.producer'] },
+                      },
+                    },
+                    0,
+                  ],
+                },
+              },
+            },
+          },
+          tags: {
+            $map: {
+              input: '$tags',
+              as: 'tag',
+              in: {
+                tag: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: '$tagData',
+                        as: 't',
+                        cond: { $eq: ['$$t._id', '$$tag.tag'] },
+                      },
+                    },
+                    0,
+                  ],
+                },
+                likes: '$$tag.likes',
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          galId: 1,
+          transTitle: 1,
+          originTitle: 1,
+          cover: 1,
+          releaseDate: 1,
+          nsfw: 1,
+          avgRate: 1,
+          rateCount: 1,
+          'producers.producer.name': 1,
+          'producers.producer.id': 1,
+          'tags.tag.name': 1,
+          'tags.likes': 1,
+        },
+      },
+      { $sort: { releaseDate: 1 } },
+    ])
+
+    return games
   }
 
   async getDownloadInfo(id: string): Promise<DownloadInfo> {

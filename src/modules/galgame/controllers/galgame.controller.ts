@@ -11,6 +11,7 @@ import { DownloadAuthDto } from '../dto/download-auth.dto'
 import { DisableNSFWFilter } from '../../auth/decorators/disable-nsfw-filter.decorator'
 import { CreateGalgameDto } from '../dto/create-galgame.dto'
 import { UpdateGalgameCoverAndImagesDto } from '../dto/update-galgame.dto'
+import { GetGalgameMonthlyReleasesDto } from '../dto/get-galgame-monthly-releases.dto'
 
 @Controller('galgame')
 export class GalgameController {
@@ -22,6 +23,14 @@ export class GalgameController {
   @Get('list')
   async getGalgameList(@Query() query: GetGalgameListDto, @Req() req: RequestWithUser) {
     const result = await this.galgameService.getGalgameList(req, query)
+    return {
+      data: result,
+    }
+  }
+
+  @Get('monthly-releases')
+  async getGalgameMonthlyReleases(@Query() query: GetGalgameMonthlyReleasesDto) {
+    const result = await this.galgameService.getGalgameMonthlyReleases(query)
     return {
       data: result,
     }
