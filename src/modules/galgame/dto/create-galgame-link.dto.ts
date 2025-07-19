@@ -91,8 +91,9 @@ export class CreateGalgameLinkDto {
   note: string
 
   @IsString()
+  @IsEnum(OfficialLinkPlatform)
   @IsOptional()
-  officialLinkPlatform?: string
+  officialLinkPlatform?: OfficialLinkPlatform
 
   @IsString()
   @IsOptional()
@@ -131,7 +132,7 @@ export class CreateGalgameLinkDto {
 
   @IsString()
   @IsOptional()
-  platform?: Platform | OfficialLinkPlatform
+  platform?: Platform
 
   @IsString()
   @IsOptional()

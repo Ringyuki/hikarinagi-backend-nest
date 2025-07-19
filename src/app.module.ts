@@ -11,6 +11,7 @@ import { HikariConfigService } from './common/config/configs'
 import { UserModule } from './modules/user/user.module'
 import { AuthModule } from './modules/auth/auth.module'
 import { EmailModule } from './modules/email/email.module'
+import { MessageModule } from './modules/message/message.module'
 import { SharedModule } from './modules/shared/shared.module'
 import { EntitiesModule } from './modules/entities/entities.module'
 import { BangumiModule } from './modules/bangumi/bangumi.module'
@@ -97,6 +98,7 @@ import { GalgameModule } from './modules/galgame/galgame.module'
     UserModule,
     EmailModule,
     GalgameModule,
+    MessageModule,
   ],
   controllers: [],
   providers: [
