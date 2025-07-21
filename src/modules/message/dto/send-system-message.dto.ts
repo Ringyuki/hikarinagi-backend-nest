@@ -8,13 +8,13 @@ import {
   ValidationArguments,
 } from 'class-validator'
 
-enum SystemMessageType {
+export enum SystemMessageType {
   SYSTEM = 'system',
   NOTIFICATION = 'notification',
   INTERACTION = 'interaction',
 }
 
-enum InteractionType {
+export enum InteractionType {
   LIKE = 'like',
   COMMENT = 'comment',
   REPLY = 'reply',

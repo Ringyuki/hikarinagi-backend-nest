@@ -12,13 +12,14 @@ import {
   Query,
 } from '@nestjs/common'
 import { Roles } from '../../auth/decorators/roles.decorator'
-import { GalgameLinsService } from '../services/galgame-lins.service'
+import { GalgameLinsService } from '../services/galgame-links.service'
 import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
 import { RolesGuard } from '../../auth/guards/roles.guard'
 import { CreateGalgameLinkDto } from '../dto/create-galgame-link.dto'
 import { UpdateGalgameLinkDto } from '../dto/update-galgame-link.dto'
+import { ReportGalgameLinkDto } from '../dto/report-galgame-link.dto'
 import { DeleteGalgameLinkDto } from '../dto/delete-galgame-link.dto'
 
 @Controller('galgame/links')
@@ -57,5 +58,17 @@ export class GalgameLinksController {
     @Req() req: RequestWithUser,
   ) {
     await this.galgameLinsService.deleteLink(galgame_id, link_id, query, req)
+  }
+
+  @Post('/:galgame_id/:link_id/report')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(HikariUserGroup.USER)
+  async reportLink(
+    @Param('galgame_id') galgame_id: string,
+    @Param('link_id') link_id: string,
+    @Query() query: ReportGalgameLinkDto,
+    @Req() req: RequestWithUser,
+  ) {
+    await this.galgameLinsService.reportLink(galgame_id, link_id, query, req)
   }
 }
