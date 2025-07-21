@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common'
 import { GalgameService } from './services/galgame.service'
-import { GalgameLinsService } from './services/galgame-lins.service'
+import { GalgameLinsService } from './services/galgame-links.service'
 import { GalgameController } from './controllers/galgame.controller'
 import { GalgameLinksController } from './controllers/galgame-links.controller'
 import { Galgame, GalgameSchema } from './schemas/galgame.schema'
