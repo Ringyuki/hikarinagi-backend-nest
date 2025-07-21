@@ -12,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common'
 import { Roles } from '../../auth/decorators/roles.decorator'
-import { GalgameLinsService } from '../services/galgame-lins.service'
+import { GalgameLinsService } from '../services/galgame-links.service'
 import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'

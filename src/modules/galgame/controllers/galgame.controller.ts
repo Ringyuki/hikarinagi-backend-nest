@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Param, Query, Req, Body, UseGuards } from '@nestjs/common'
 import { Roles } from '../../auth/decorators/roles.decorator'
 import { GalgameService } from '../services/galgame.service'
-import { GalgameLinsService } from '../services/galgame-lins.service'
+import { GalgameLinsService } from '../services/galgame-links.service'
 import { GetGalgameListDto } from '../dto/get-galgame-list.dto'
 import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
