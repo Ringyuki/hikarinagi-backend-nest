@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Param, Query, Req, Body, UseGuards } from '@nestjs/common'
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Param,
+  Query,
+  Req,
+  Body,
+  UseGuards,
+  Inject,
+} from '@nestjs/common'
 import { Roles } from '../../auth/decorators/roles.decorator'
 import { GalgameService } from '../services/galgame.service'
 import { GalgameLinsService } from '../services/galgame-links.service'
@@ -12,17 +23,29 @@ import { DisableNSFWFilter } from '../../auth/decorators/disable-nsfw-filter.dec
 import { CreateGalgameDto } from '../dto/create-galgame.dto'
 import { UpdateGalgameCoverAndImagesDto } from '../dto/update-galgame.dto'
 import { GetGalgameMonthlyReleasesDto } from '../dto/get-galgame-monthly-releases.dto'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Cache } from 'cache-manager'
 
 @Controller('galgame')
 export class GalgameController {
   constructor(
     private readonly galgameService: GalgameService,
     private readonly galgameLinsService: GalgameLinsService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   @Get('list')
   async getGalgameList(@Query() query: GetGalgameListDto, @Req() req: RequestWithUser) {
+    const cacheKey = `galgame-list-${JSON.stringify(query)}`
+    const cachedData = await this.cacheManager.get(cacheKey)
+    if (cachedData) {
+      return {
+        data: cachedData,
+        cached: true,
+      }
+    }
     const result = await this.galgameService.getGalgameList(req, query)
+    await this.cacheManager.set(cacheKey, result, 60 * 60 * 24)
     return {
       data: result,
     }

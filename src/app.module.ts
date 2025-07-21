@@ -15,11 +15,12 @@ import { MessageModule } from './modules/message/message.module'
 import { SharedModule } from './modules/shared/shared.module'
 import { EntitiesModule } from './modules/entities/entities.module'
 import { BangumiModule } from './modules/bangumi/bangumi.module'
+import { GalgameModule } from './modules/galgame/galgame.module'
+import { LightNovelModule } from './modules/novel/lightnovel.module'
 import { RootAppModule } from './common/modules/app.module'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { TokenExtractionInterceptor } from './common/interceptors/token-extraction.interceptor'
 import { NSFWFilterInterceptor } from './common/interceptors/nsfw-filter.interceptor'
-import { GalgameModule } from './modules/galgame/galgame.module'
 
 @Module({
   imports: [
@@ -99,6 +100,7 @@ import { GalgameModule } from './modules/galgame/galgame.module'
     EmailModule,
     GalgameModule,
     MessageModule,
+    LightNovelModule,
   ],
   controllers: [],
   providers: [

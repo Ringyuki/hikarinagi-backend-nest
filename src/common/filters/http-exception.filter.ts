@@ -58,7 +58,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (status >= 500) {
       this.logger.error('服务器错误', errorLog)
     } else if (status >= 400) {
-      this.logger.warn('客户端错误', errorLog)
+      // this.logger.warn('客户端错误', errorLog)
     }
 
     const responseBody: ApiResponse<null> = {

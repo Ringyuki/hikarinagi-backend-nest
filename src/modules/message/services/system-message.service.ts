@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
 import { CounterService } from 'src/modules/shared/services/counter.service'
 import { SendSystemMessageDto } from '../dto/send-system-message.dto'
+import { CounterName } from 'src/modules/shared/types/couters.type'
 
 @Injectable()
 export class SystemMessageService {
@@ -16,7 +17,7 @@ export class SystemMessageService {
     const { targetUser, type, title, content, interactionType, interactUser, link, linkText } =
       sendSystemMessageDto
 
-    const id = await this.counterService.getNextSequence('systemMessageId')
+    const id = await this.counterService.getNextSequence(CounterName.SYSTEM_MESSAGE_ID)
     const systemMessage = new this.systemMessageModel({
       id,
       targetUser,

@@ -7,6 +7,7 @@ import {
   IsMongoId,
   ValidationArguments,
 } from 'class-validator'
+import { Types } from 'mongoose'
 
 enum SystemMessageType {
   SYSTEM = 'system',
@@ -25,7 +26,7 @@ enum InteractionType {
 export class SendSystemMessageDto {
   @IsMongoId()
   @IsNotEmpty()
-  targetUser: string
+  targetUser: Types.ObjectId
 
   @IsEnum(SystemMessageType)
   @IsNotEmpty()
@@ -83,7 +84,7 @@ export class SendSystemMessageDto {
       },
     },
   })
-  interactUser?: string
+  interactUser?: Types.ObjectId
 
   @IsString()
   @IsOptional()

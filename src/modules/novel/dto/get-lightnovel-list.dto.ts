@@ -9,14 +9,15 @@ import {
   IsMongoId,
 } from 'class-validator'
 import { Type } from 'class-transformer'
-import { ToArray, ToNumberArray } from '../../../common/decorators/transform.decorators'
 import { Types } from 'mongoose'
+import { ToArray, ToNumberArray } from '../../../common/decorators/transform.decorators'
 
 enum SortField {
-  RELEASE_DATE = 'releaseDate',
+  PUBLICATION_DATE = 'publicationDate',
   VIEWS = 'views',
   RATE = 'rate',
   RATE_COUNT = 'rateCount',
+  NOVEL_ID = 'novelId',
 }
 
 enum SortOrder {
@@ -24,7 +25,7 @@ enum SortOrder {
   DESC = 'desc',
 }
 
-export class GetGalgameListDto {
+export class GetLightNovelListDto {
   @IsNotEmpty({ message: 'page is required' })
   @IsNumber()
   @Min(1)
@@ -65,4 +66,10 @@ export class GetGalgameListDto {
   @IsMongoId({ each: true })
   @ToArray()
   tagsField?: Types.ObjectId[]
+
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  @ToArray()
+  bunkoField?: Types.ObjectId[]
 }
