@@ -4,6 +4,7 @@ import { LightNovelVolume, LightNovelVolumeDocument } from '../schemas/light-nov
 import { EditHistoryService } from 'src/common/services/edit-history.service'
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
+import { UpdateVolumeHasEpubDto } from '../dto/update-volume-has-epub.dto'
 
 @Injectable()
 export class LightNovelVolumeService {
@@ -62,5 +63,19 @@ export class LightNovelVolumeService {
       createdBy,
       lastEditBy,
     }
+  }
+
+  async updateHasEpub(volumeId: number, { hasEpub }: UpdateVolumeHasEpubDto) {
+    const volume = await this.lightNovelVolumeModel.findOneAndUpdate(
+      { volumeId },
+      { $set: { hasEpub } },
+      { new: true },
+    )
+
+    if (!volume) {
+      throw new NotFoundException('Volume not found')
+    }
+
+    return volume
   }
 }
