@@ -7,12 +7,26 @@ import { GetLightNovelListDto } from '../dto/get-lightnovel-list.dto'
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface'
 import { RequestWithUser } from '../../../modules/auth/interfaces/request-with-user.interface'
 import { Types } from 'mongoose'
+import { CreateLightNovelDto } from '../dto/create-lightnovel.dto'
+import { InjectConnection } from '@nestjs/mongoose'
+import { Connection } from 'mongoose'
+import { CounterService } from '../../shared/services/counter.service'
+import { Tag, TagDocument } from '../../entities/schemas/tag.schema'
+import { Producer, ProducerDocument } from '../../entities/schemas/producer.schema'
+import { Person, PersonDocument } from '../../entities/schemas/person.schema'
+import { Character, CharacterDocument } from '../../entities/schemas/character.schema'
 
 @Injectable()
 export class LightNovelService {
   constructor(
     @InjectModel(LightNovel.name) private lightNovelModel: Model<LightNovelDocument>,
     private readonly editHistoryService: EditHistoryService,
+    @InjectConnection() private readonly connection: Connection,
+    private readonly counterService: CounterService,
+    @InjectModel(Tag.name) private tagModel: Model<TagDocument>,
+    @InjectModel(Producer.name) private producerModel: Model<ProducerDocument>,
+    @InjectModel(Person.name) private personModel: Model<PersonDocument>,
+    @InjectModel(Character.name) private characterModel: Model<CharacterDocument>,
   ) {}
 
   async findById(id: string) {
@@ -334,6 +348,493 @@ export class LightNovelService {
         totalPages,
         currentPage: page,
       },
+    }
+  }
+
+  async createLightNovel(createLightNovelDto: CreateLightNovelDto, req: RequestWithUser) {
+    const session = await this.connection.startSession()
+    try {
+      session.startTransaction()
+
+      const creator = {
+        userId: new Types.ObjectId(req.user._id),
+        name: req.user.name,
+      }
+
+      const {
+        bangumiBookId,
+        tags,
+        author,
+        illustrators,
+        publishers,
+        bunko,
+        characters,
+        novelStatus,
+      } = createLightNovelDto
+
+      // 1. 检查小说是否已存在
+      if (bangumiBookId) {
+        const existingNovel = await this.lightNovelModel.findOne({ bangumiBookId }).session(session)
+        if (existingNovel) {
+          throw new Error(`Light novel with bangumiBookId ${bangumiBookId} already exists`)
+        }
+      }
+
+      // 2. 创建/获取作者
+      let authorId
+      if (author && !author._id) {
+        const processedLabels = author.labels.map(label => ({
+          key: label.key,
+          value: label.value || '未知',
+        }))
+
+        const existingAuthor = await this.personModel
+          .findOne({ name: author.name })
+          .session(session)
+        if (existingAuthor) {
+          authorId = existingAuthor._id
+        } else {
+          const id = await this.counterService.getNextSequence('personId')
+          const [newAuthor] = await this.personModel.create(
+            [
+              {
+                id,
+                creator,
+                ...author,
+                labels: processedLabels,
+              },
+            ],
+            { session },
+          )
+          await this.editHistoryService.recordEditHistory({
+            type: 'person',
+            actionType: 'create',
+            entityId: new Types.ObjectId(newAuthor._id as string),
+            userId: new Types.ObjectId(creator.userId),
+            userName: creator.name,
+            changes: '创建了person条目',
+            previous: null,
+            updated: newAuthor.toObject(),
+          })
+          authorId = newAuthor._id
+        }
+      } else {
+        authorId = author._id
+      }
+
+      // 3. 创建/获取插画师
+      const illustratorIds = []
+      if (illustrators && illustrators.length > 0) {
+        for (const illustratorData of illustrators) {
+          if (illustratorData.illustrator._id) {
+            illustratorIds.push({
+              illustrator: new Types.ObjectId(illustratorData.illustrator._id),
+              note: illustratorData.note || '',
+            })
+            continue
+          }
+          try {
+            let person
+            const processedLabels = illustratorData.illustrator.labels.map(label => ({
+              key: label.key,
+              value: label.value || '未知',
+            }))
+
+            const existingPerson = await this.personModel
+              .findOne({
+                name: illustratorData.illustrator.name,
+              })
+              .session(session)
+
+            if (existingPerson) {
+              person = existingPerson
+            } else {
+              const id = await this.counterService.getNextSequence('personId')
+              const [newPerson] = await this.personModel.create(
+                [
+                  {
+                    id,
+                    creator,
+                    ...illustratorData.illustrator,
+                    labels: processedLabels,
+                  },
+                ],
+                { session },
+              )
+              await this.editHistoryService.recordEditHistory({
+                type: 'person',
+                actionType: 'create',
+                entityId: new Types.ObjectId(newPerson._id as string),
+                userId: new Types.ObjectId(creator.userId),
+                userName: creator.name,
+                changes: '创建了person条目',
+                previous: null,
+                updated: newPerson.toObject(),
+              })
+              person = newPerson
+            }
+
+            illustratorIds.push({
+              illustrator: new Types.ObjectId(person._id as string),
+              note: illustratorData.note || '',
+            })
+          } catch (error) {
+            console.error('Error processing illustrator:', error, illustratorData)
+            throw error
+          }
+        }
+      }
+
+      // 4. 创建/获取出版社
+      const publisherIds = []
+      if (publishers && publishers.length > 0) {
+        for (const publisherData of publishers) {
+          if (publisherData.publisher._id) {
+            publisherIds.push({
+              publisher: new Types.ObjectId(publisherData.publisher._id),
+              note: publisherData.note || '',
+            })
+            continue
+          }
+          try {
+            let producer
+            // 检查出版社数据是否包含必需的 country 字段
+            if (!publisherData.publisher.country) {
+              throw new Error(`Country is required for publisher ${publisherData.publisher.name}`)
+            }
+
+            const existingProducer = await this.producerModel
+              .findOne({
+                name: publisherData.publisher.name,
+              })
+              .session(session)
+
+            if (existingProducer) {
+              producer = existingProducer
+            } else {
+              const id = await this.counterService.getNextSequence('producerId')
+              const [newProducer] = await this.producerModel.create(
+                [
+                  {
+                    id,
+                    creator,
+                    ...publisherData.publisher,
+                    country: publisherData.publisher.country, // 确保包含 country 字段
+                  },
+                ],
+                { session },
+              )
+              await this.editHistoryService.recordEditHistory({
+                type: 'producer',
+                actionType: 'create',
+                entityId: new Types.ObjectId(newProducer._id as string),
+                userId: new Types.ObjectId(creator.userId),
+                userName: creator.name,
+                changes: '创建了producer条目',
+                previous: null,
+                updated: newProducer.toObject(),
+              })
+              producer = newProducer
+            }
+
+            publisherIds.push({
+              publisher: new Types.ObjectId(producer._id as string),
+              note: publisherData.note || '',
+            })
+          } catch (error) {
+            console.error('Error processing publisher:', error, publisherData)
+            throw error
+          }
+        }
+      }
+
+      // 5. 处理文库（新增）
+      let bunkoId = null
+      if (bunko && !bunko._id) {
+        try {
+          if (!bunko.country) {
+            throw new Error(`Country is required for bunko ${bunko.name}`)
+          }
+
+          const existingBunko = await this.producerModel
+            .findOne({
+              name: bunko.name,
+            })
+            .session(session)
+
+          if (existingBunko) {
+            bunkoId = new Types.ObjectId(existingBunko._id as string)
+          } else {
+            const id = await this.counterService.getNextSequence('producerId')
+            const [newBunko] = await this.producerModel.create(
+              [
+                {
+                  id,
+                  creator,
+                  ...bunko,
+                  country: bunko.country,
+                },
+              ],
+              { session },
+            )
+            await this.editHistoryService.recordEditHistory({
+              type: 'producer',
+              actionType: 'create',
+              entityId: new Types.ObjectId(newBunko._id as string),
+              userId: new Types.ObjectId(creator.userId),
+              userName: creator.name,
+              changes: '创建了producer条目',
+              previous: null,
+              updated: newBunko.toObject(),
+            })
+            bunkoId = new Types.ObjectId(newBunko._id as string)
+          }
+        } catch (error) {
+          console.error('Error processing bunko:', error, bunko)
+          throw error
+        }
+      } else {
+        bunkoId = new Types.ObjectId(bunko._id)
+      }
+
+      // 6. 处理角色
+      const characterLinks = []
+      if (characters && characters.length > 0) {
+        for (const characterData of characters) {
+          if (characterData.character._id) {
+            characterLinks.push({
+              character: new Types.ObjectId(characterData.character._id),
+              role: characterData.role || '主角',
+            })
+            continue
+          }
+          try {
+            let character
+            const processedLabels = characterData.character.labels.map(label => ({
+              key: label.key,
+              value: label.value || '未知',
+            }))
+
+            const existingCharacter = await this.characterModel
+              .findOne({
+                name: characterData.character.name,
+              })
+              .session(session)
+
+            if (existingCharacter) {
+              character = existingCharacter
+            } else {
+              const id = await this.counterService.getNextSequence('characterId')
+              const [newCharacter] = await this.characterModel.create(
+                [
+                  {
+                    id,
+                    creator,
+                    ...characterData.character,
+                    labels: processedLabels,
+                  },
+                ],
+                { session },
+              )
+              await this.editHistoryService.recordEditHistory({
+                type: 'character',
+                actionType: 'create',
+                entityId: new Types.ObjectId(newCharacter._id as string),
+                userId: new Types.ObjectId(creator.userId),
+                userName: creator.name,
+                changes: '创建了character条目',
+                previous: null,
+                updated: newCharacter.toObject(),
+              })
+              character = newCharacter
+            }
+
+            characterLinks.push({
+              character: new Types.ObjectId(character._id as string),
+              role: characterData.role,
+            })
+          } catch (error) {
+            console.error('Error processing character:', error, characterData)
+            throw error
+          }
+        }
+      }
+
+      // 7. 处理标签
+      const tagIds = []
+      if (tags && tags.length > 0) {
+        for (const tagData of tags) {
+          if (tagData.tag._id) {
+            tagIds.push({
+              tag: tagData.tag._id,
+              likes: tagData.likes || 0,
+            })
+            continue
+          }
+          try {
+            let tag
+            const existingTag = await this.tagModel
+              .findOne({
+                $or: [{ name: tagData.tag.name }, { aliases: tagData.tag.name }],
+              })
+              .session(session)
+            if (existingTag) {
+              tag = existingTag
+            } else {
+              const id = await this.counterService.getNextSequence('tagId')
+              const [newTag] = await this.tagModel.create(
+                [
+                  {
+                    id,
+                    creator,
+                    name: tagData.tag.name,
+                    aliases: tagData.tag.aliases || [],
+                    description: tagData.tag.description,
+                  },
+                ],
+                { session },
+              )
+              tag = newTag
+            }
+            tagIds.push({
+              tag: tag._id,
+              likes: tagData.likes || 0,
+            })
+          } catch (error) {
+            console.error('Error processing tag:', error, tagData)
+            throw error
+          }
+        }
+      }
+
+      // 8. 创建轻小说主条目（不包含分卷信息）
+      const novelId = await this.counterService.getNextSequence('novelId')
+      const lightNovelData = {
+        ...createLightNovelDto,
+        novelId,
+        author: authorId,
+        illustrators: illustratorIds,
+        publishers: publisherIds,
+        bunko: bunkoId,
+        characters: characterLinks,
+        tags: tagIds,
+        novelStatus,
+        series: {
+          currentVolume: 0,
+          volumes: [],
+        },
+        creator,
+        createdAt: new Date(),
+        status:
+          req.user.hikariUserGroup === 'admin' || req.user.hikariUserGroup === 'superAdmin'
+            ? 'published'
+            : 'pending',
+      }
+
+      const [newLightNovel] = await this.lightNovelModel.create([lightNovelData], { session })
+
+      // 9. 更新关联信息
+      // 更新作者关联
+      if (authorId) {
+        await this.personModel.findByIdAndUpdate(
+          authorId,
+          {
+            $push: {
+              works: {
+                workType: 'LightNovel',
+                work: newLightNovel._id,
+              },
+            },
+          },
+          { session },
+        )
+      }
+
+      // 更新插画师关联
+      for (const illustrator of illustratorIds) {
+        await this.personModel.findByIdAndUpdate(
+          illustrator.illustrator,
+          {
+            $push: {
+              works: {
+                workType: 'LightNovel',
+                work: newLightNovel._id,
+              },
+            },
+          },
+          { session },
+        )
+      }
+
+      // 更新出版社关联
+      for (const publisher of publisherIds) {
+        await this.producerModel.findByIdAndUpdate(
+          publisher.publisher,
+          {
+            $push: {
+              works: {
+                workType: 'LightNovel',
+                work: newLightNovel._id,
+              },
+            },
+          },
+          { session },
+        )
+      }
+
+      // 更新文库关联
+      if (bunkoId) {
+        await this.producerModel.findByIdAndUpdate(
+          bunkoId,
+          {
+            $push: {
+              works: {
+                workType: 'LightNovel',
+                work: newLightNovel._id,
+              },
+            },
+          },
+          { session },
+        )
+      }
+
+      // 更新角色关联
+      for (const char of characterLinks) {
+        await this.characterModel.findByIdAndUpdate(
+          char.character,
+          {
+            $push: {
+              works: {
+                workType: 'LightNovel',
+                work: newLightNovel._id,
+              },
+            },
+          },
+          { session },
+        )
+      }
+
+      await this.editHistoryService.recordEditHistory({
+        type: 'lightNovel',
+        actionType: 'create',
+        novelId: String(novelId),
+        userId: new Types.ObjectId(req.user._id),
+        userName: req.user.name,
+        changes: '创建了小说条目',
+        previous: null,
+        updated: newLightNovel.toObject(),
+      })
+
+      await session.commitTransaction()
+
+      return {
+        novelId: newLightNovel.novelId,
+      }
+    } catch (error) {
+      await session.abortTransaction()
+      throw error
+    } finally {
+      session.endSession()
     }
   }
 }

@@ -1,0 +1,326 @@
+import {
+  IsString,
+  IsNumber,
+  IsMongoId,
+  ValidateNested,
+  IsArray,
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  IsObject,
+} from 'class-validator'
+import { Type } from 'class-transformer'
+import { Types } from 'mongoose'
+
+export class ProducerLabelDto {
+  @IsString()
+  key: string
+
+  @IsString()
+  value: string
+}
+
+export class ProducerDto {
+  @IsOptional()
+  @IsMongoId()
+  _id?: Types.ObjectId
+
+  @IsOptional()
+  @IsNumber()
+  id?: number
+
+  @IsString()
+  name: string
+
+  @IsArray()
+  @IsString({ each: true })
+  aliases: string[]
+
+  @IsString()
+  intro: string
+
+  @IsOptional()
+  @IsString()
+  transIntro?: string
+
+  @IsArray()
+  @IsString({ each: true })
+  type: string[]
+
+  @IsString()
+  country: string
+
+  @IsOptional()
+  @IsString()
+  established?: string
+
+  @IsOptional()
+  @IsString()
+  logo?: string
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProducerLabelDto)
+  labels: ProducerLabelDto[]
+}
+
+export class CreateLightNovelPublisherDto {
+  @ValidateNested()
+  @Type(() => ProducerDto)
+  publisher: ProducerDto
+
+  @IsString()
+  @IsOptional()
+  note?: string
+}
+
+export class TagDto {
+  @IsOptional()
+  @IsString()
+  _id?: Types.ObjectId
+
+  @IsOptional()
+  @IsNumber()
+  id?: number
+
+  @IsString()
+  name: string
+
+  @IsArray()
+  @IsString({ each: true })
+  aliases: string[]
+
+  @IsOptional()
+  @IsString()
+  description?: string
+}
+
+export class CreateLightNovelTagDto {
+  @ValidateNested()
+  @Type(() => TagDto)
+  tag: TagDto
+
+  @IsOptional()
+  @IsNumber()
+  likes?: number
+}
+
+export class PersonLabelDto {
+  @IsString()
+  key: string
+
+  @IsString()
+  value: string
+}
+
+export class PersonDto {
+  @IsOptional()
+  @IsString()
+  _id?: Types.ObjectId
+
+  @IsOptional()
+  @IsNumber()
+  id?: number
+
+  @IsString()
+  name: string
+
+  @IsOptional()
+  @IsString()
+  transName?: string
+
+  @IsArray()
+  @IsString({ each: true })
+  aliases: string[]
+
+  @IsOptional()
+  @IsString()
+  intro?: string
+
+  @IsOptional()
+  @IsString()
+  transIntro?: string
+
+  @IsOptional()
+  @IsString()
+  image?: string
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PersonLabelDto)
+  labels: PersonLabelDto[]
+
+  @IsOptional()
+  @IsArray()
+  works?: any[]
+
+  @IsOptional()
+  @IsString()
+  status?: string
+
+  @IsOptional()
+  creator?: any
+
+  @IsOptional()
+  @IsString()
+  createdAt?: string
+
+  @IsOptional()
+  @IsString()
+  updatedAt?: string
+}
+
+export class CreateLightNovelIllustratorDto {
+  @ValidateNested()
+  @Type(() => PersonDto)
+  illustrator: PersonDto
+
+  @IsString()
+  @IsOptional()
+  note?: string
+}
+
+export class CharacterLabelDto {
+  @IsString()
+  key: string
+
+  @IsString()
+  value: string
+}
+
+export class CharacterDto {
+  @IsOptional()
+  @IsMongoId()
+  _id?: Types.ObjectId
+
+  @IsOptional()
+  @IsNumber()
+  id?: number
+
+  @IsString()
+  name: string
+
+  @IsOptional()
+  @IsString()
+  transName?: string
+
+  @IsArray()
+  @IsString({ each: true })
+  aliases: string[]
+
+  @IsOptional()
+  @IsString()
+  intro?: string
+
+  @IsOptional()
+  @IsString()
+  transIntro?: string
+
+  @IsOptional()
+  @IsString()
+  image?: string
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CharacterLabelDto)
+  labels: CharacterLabelDto[]
+
+  @IsOptional()
+  @IsString()
+  status?: string
+
+  @IsOptional()
+  creator?: any
+
+  @IsOptional()
+  @IsArray()
+  works?: any[]
+
+  @IsOptional()
+  @IsString()
+  createdAt?: string
+
+  @IsOptional()
+  @IsString()
+  updatedAt?: string
+}
+
+export class CreateLightNovelCharacterDto {
+  @ValidateNested()
+  @Type(() => CharacterDto)
+  character: CharacterDto
+
+  @IsString()
+  @IsOptional()
+  role?: string
+}
+
+enum NovelStatus {
+  SERIALIZING = 'SERIALIZING',
+  FINISHED = 'FINISHED',
+  PAUSED = 'PAUSED',
+  ABANDONED = 'ABANDONED',
+}
+
+export class CreateLightNovelDto {
+  @IsNumber()
+  @IsOptional()
+  bangumiBookId?: number
+
+  @IsString()
+  name: string
+
+  @IsString()
+  @IsOptional()
+  name_cn?: string
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  otherNames?: string[]
+
+  @IsString()
+  cover: string
+
+  @IsString()
+  @IsEnum(NovelStatus)
+  novelStatus: NovelStatus
+
+  @IsBoolean()
+  nsfw: boolean
+
+  @IsString()
+  summary: string
+
+  @IsString()
+  @IsOptional()
+  summary_cn?: string
+
+  @IsObject()
+  @Type(() => PersonDto)
+  author: PersonDto
+
+  @IsObject()
+  @Type(() => ProducerDto)
+  bunko: ProducerDto
+
+  @IsArray()
+  @Type(() => CreateLightNovelPublisherDto)
+  publishers: CreateLightNovelPublisherDto[]
+
+  @IsArray()
+  @Type(() => CreateLightNovelIllustratorDto)
+  illustrators: CreateLightNovelIllustratorDto[]
+
+  @IsArray()
+  @Type(() => CreateLightNovelTagDto)
+  tags: CreateLightNovelTagDto[]
+
+  @IsArray()
+  @Type(() => CreateLightNovelCharacterDto)
+  characters: CreateLightNovelCharacterDto[]
+
+  @IsBoolean()
+  @IsOptional()
+  locked?: boolean
+}

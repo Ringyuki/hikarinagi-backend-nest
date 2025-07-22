@@ -158,7 +158,7 @@ export class EditHistoryService {
       case 'person':
       case 'character':
         await this.sharedEntityHistoryModel.create({
-          type,
+          entityType: type,
           entityId,
           actionType,
           userId,
