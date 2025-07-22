@@ -8,6 +8,7 @@ import {
   IsUrl,
   IsEnum,
 } from 'class-validator'
+import { Type } from 'class-transformer'
 
 enum GalgameLinkType {
   OFFICIAL_LINK = 'official-link',
@@ -101,6 +102,7 @@ export class CreateGalgameLinkDto {
   downloadType?: DownloadType
 
   @IsNumber()
+  @Type(() => Number)
   @Min(0, { message: 'size must be greater than or equal to 0' })
   @IsOptional()
   size?: number
