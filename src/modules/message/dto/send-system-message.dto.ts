@@ -9,13 +9,13 @@ import {
 } from 'class-validator'
 import { Types } from 'mongoose'
 
-enum SystemMessageType {
+export enum SystemMessageType {
   SYSTEM = 'system',
   NOTIFICATION = 'notification',
   INTERACTION = 'interaction',
 }
 
-enum InteractionType {
+export enum InteractionType {
   LIKE = 'like',
   COMMENT = 'comment',
   REPLY = 'reply',

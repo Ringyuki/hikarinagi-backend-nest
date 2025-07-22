@@ -11,14 +11,22 @@ import { GalgameLinks, GalgameLinksDocument } from '../schemas/galgame-links.sch
 import { RequestWithUser } from 'src/modules/auth/interfaces/request-with-user.interface'
 import { CreateGalgameLinkDto } from '../dto/create-galgame-link.dto'
 import { UpdateGalgameLinkDto } from '../dto/update-galgame-link.dto'
+import { ReportGalgameLinkDto } from '../dto/report-galgame-link.dto'
 import { DeleteGalgameLinkDto } from '../dto/delete-galgame-link.dto'
 import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
+import { SystemMessageService } from 'src/modules/message/services/system-message.service'
+import { EmailService } from 'src/modules/email/services/email.service'
+import { User, UserDocument } from 'src/modules/user/schemas/user.schema'
+import { SystemMessageType } from 'src/modules/message/dto/send-system-message.dto'
 
 @Injectable()
 export class GalgameLinsService {
   constructor(
     @InjectModel(GalgameLinks.name) private galgameLinksModel: Model<GalgameLinksDocument>,
     @InjectModel(Galgame.name) private galgameModel: Model<GalgameDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly systemMessageService: SystemMessageService,
+    private readonly emailService: EmailService,
   ) {}
 
   async getLinks(id: string) {
@@ -55,13 +63,15 @@ export class GalgameLinsService {
           id: detail._id,
           link: detail.link,
           note: detail.note,
+          isActive: detail.isActive ?? true,
           createdAt: detail.createdAt,
+          updatedAt: detail.updatedAt,
           ...metaObj,
         }
       })
 
       return {
-        userId: linkDoc.userId,
+        userId: (linkDoc.userId as any).toJSON({ include_id: true }),
         linkType: linkDoc.linkType,
         links: linkDetails,
       }
@@ -131,6 +141,7 @@ export class GalgameLinsService {
       link_meta,
       note: linkDetail.note,
       createdAt: new Date(),
+      isActive: true,
     })
 
     const createdLinks = await galgameLinks.save()
@@ -171,12 +182,12 @@ export class GalgameLinsService {
       })
       link.linkDetail = link.linkDetail.map(detail => {
         if (detail._id.toString() === link_id) {
-          return {
-            ...detail,
-            link: linkDetail.link || detail.link,
-            note: linkDetail.note || detail.note,
-            link_meta,
-          }
+          detail.link = linkDetail.link || detail.link
+          detail.note = linkDetail.note || detail.note
+          detail.link_meta = link_meta
+          detail.isActive = true
+          detail.updatedAt = new Date()
+          detail.reportedAt = null
         }
         return detail
       })
@@ -204,12 +215,12 @@ export class GalgameLinsService {
     }
     link.linkDetail = link.linkDetail.map(detail => {
       if (detail._id.toString() === link_id) {
-        return {
-          ...detail,
-          link: linkDetail.link || detail.link,
-          note: linkDetail.note || detail.note,
-          link_meta,
-        }
+        detail.link = linkDetail.link || detail.link
+        detail.note = linkDetail.note || detail.note
+        detail.link_meta = link_meta
+        detail.isActive = true
+        detail.reportedAt = null
+        detail.updatedAt = new Date()
       }
       return detail
     })
@@ -248,6 +259,57 @@ export class GalgameLinsService {
       await link.deleteOne() // 如果linkDetail为空，则删除整个link
     } else {
       await link.save()
+    }
+  }
+
+  async reportLink(
+    galgame_id: string,
+    link_id: string,
+    data: ReportGalgameLinkDto,
+    req: RequestWithUser,
+  ) {
+    const { linkType, userId } = data
+    const galgame = await this.galgameModel.findById(galgame_id)
+    if (!galgame) {
+      throw new NotFoundException('galgame not found')
+    }
+
+    const link = await this.galgameLinksModel
+      .findOne({
+        galId: galgame_id,
+        userId: userId ? new Types.ObjectId(userId) : new Types.ObjectId(req.user._id),
+        linkType,
+      })
+      .populate('userId', 'name email')
+    if (!link) {
+      throw new NotFoundException('link not found')
+    }
+    const linkDetail = link.linkDetail.find(detail => detail._id.toString() === link_id)
+    if (!linkDetail) {
+      throw new NotFoundException('link detail not found')
+    }
+    if (!linkDetail.reportedAt) {
+      linkDetail.isActive = false
+      linkDetail.reportedAt = new Date()
+      await link.save()
+    }
+
+    const reportUser = req.user
+    const uploadUser = link.userId as any
+    await this.systemMessageService.sendSystemMessage({
+      targetUser: uploadUser._id,
+      type: SystemMessageType.NOTIFICATION,
+      title: '您上传的链接可能已失效',
+      content: `您在游戏 ${galgame.transTitle || galgame.originTitle[0]} 下上传的链接 ${linkDetail.link} 已被用户 ${reportUser.name} 报告为失效链接，请及时更新。`,
+      link: `/galgame/${galgame.galId}`,
+      linkText: '前往更新',
+    })
+    if (uploadUser.email) {
+      await this.emailService.sendEmail({
+        to: uploadUser.email,
+        subject: '您上传的链接可能已失效',
+        bodyHtml: `您在游戏 ${galgame.transTitle || galgame.originTitle[0]} 下上传的链接 ${linkDetail.link} 已被用户 ${reportUser.name} 报告为失效链接，请及时更新。`,
+      })
     }
   }
 }

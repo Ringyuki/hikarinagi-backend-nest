@@ -22,6 +22,11 @@ export class NSFWFilterInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map(data => {
+        // 如果数据为空 (例如 204 No Content)，则不进行任何操作
+        if (data === null || typeof data === 'undefined') {
+          return data
+        }
+
         const request = context.switchToHttp().getRequest()
         const user = request.user
         // 如果用户未登录或未允许显示NSFW内容，过滤NSFW数据

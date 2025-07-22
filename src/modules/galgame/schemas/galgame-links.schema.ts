@@ -16,7 +16,7 @@ export class LinkMeta {
   value: string
 }
 
-@Schema({ timestamps: true })
+@Schema()
 export class LinkDetail {
   _id?: Types.ObjectId
 
@@ -38,18 +38,42 @@ export class LinkDetail {
   note: string
 
   @Prop({
+    type: Boolean,
+    default: true,
+  })
+  isActive: boolean
+
+  @Prop({
     type: Date,
     default: Date.now,
   })
   createdAt: Date
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  updatedAt?: Date
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  reportedAt?: Date
 }
 
 @Schema({
   timestamps: true,
   toJSON: {
     transform: (_, ret) => {
+      if (ret.userId && ret.userId._id) {
+        ret.userId = ret.userId._id
+      }
       delete ret._id
       delete ret.__v
+      if (ret.linkDetail && Array.isArray(ret.linkDetail)) {
+        ret.linkDetail.forEach(detail => delete detail._id)
+      }
       return ret
     },
   },
@@ -85,6 +109,24 @@ export const GalgameLinksSchema = SchemaFactory.createForClass(GalgameLinks)
 
 // 复合索引确保每个用户的每种类型链接集合唯一
 GalgameLinksSchema.index({ galId: 1, userId: 1, linkType: 1 }, { unique: true })
+
+// 删除7天前失效的链接
+GalgameLinksSchema.pre('find', async function () {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  await this.model.updateMany(
+    { 'linkDetail.isActive': false, 'linkDetail.reportedAt': { $lt: sevenDaysAgo } },
+    {
+      $pull: {
+        linkDetail: {
+          isActive: false,
+          reportedAt: { $lt: sevenDaysAgo },
+        },
+      },
+    },
+  )
+  await this.model.deleteMany({ linkDetail: { $size: 0 } })
+})
+
 GalgameLinksSchema.pre('save', function (next) {
   for (const detail of this.linkDetail) {
     if (this.linkType === 'official-link') {

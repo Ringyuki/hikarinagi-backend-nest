@@ -27,10 +27,15 @@ import { Producer, ProducerSchema } from '../entities/schemas/producer.schema'
 import { Person, PersonSchema } from '../entities/schemas/person.schema'
 import { Character, CharacterSchema } from '../entities/schemas/character.schema'
 import { HttpModule } from '@nestjs/axios'
+import { MessageModule } from '../message/message.module'
+import { EmailModule } from '../email/email.module'
+import { User, UserSchema } from '../user/schemas/user.schema'
 
 @Module({
   imports: [
     HttpModule,
+    MessageModule,
+    EmailModule,
     MongooseModule.forFeature([{ name: Galgame.name, schema: GalgameSchema }]),
     MongooseModule.forFeature([{ name: GalgameLinks.name, schema: GalgameLinksSchema }]),
     MongooseModule.forFeature([{ name: Article.name, schema: ArticleSchema }]),
@@ -47,6 +52,7 @@ import { HttpModule } from '@nestjs/axios'
     MongooseModule.forFeature([{ name: Person.name, schema: PersonSchema }]),
     MongooseModule.forFeature([{ name: Character.name, schema: CharacterSchema }]),
     MongooseModule.forFeature([{ name: Tag.name, schema: TagSchema }]),
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
   controllers: [GalgameController, GalgameLinksController],
   providers: [GalgameService, GalgameLinsService, EditHistoryService],
