@@ -39,20 +39,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message = '服务器内部错误'
     }
 
+    const timestamp = Date.now()
     const errorLog = {
-      timestamp: new Date().toISOString(),
+      timestamp,
       method: request.method,
       url: request.url,
       status,
       message,
       userAgent: request.get('user-agent'),
       ip: request.ip,
-      ...(process.env.NODE_ENV === 'development' && {
-        stack: exception.stack,
-        body: request.body,
-        params: request.params,
-        query: request.query,
-      }),
+      stack: exception.stack,
+      body: request.body,
+      params: request.params,
+      query: request.query,
     }
 
     if (status >= 500) {
@@ -67,7 +66,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       version: 'v2 dev',
       message: message || '请求发生错误',
       data: null,
-      timestamp: Date.now(),
+      timestamp,
       // 开发环境返回错误堆栈
       ...(process.env.NODE_ENV === 'development' && {
         // stack: exception.stack,
