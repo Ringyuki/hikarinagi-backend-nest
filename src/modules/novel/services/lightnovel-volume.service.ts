@@ -1,10 +1,16 @@
-import { Model } from 'mongoose'
+import { Model, Types } from 'mongoose'
 import { LightNovel, LightNovelDocument } from '../schemas/light-novel.schema'
 import { LightNovelVolume, LightNovelVolumeDocument } from '../schemas/light-novel-volume.schema'
-import { EditHistoryService } from 'src/common/services/edit-history.service'
+import { EditHistoryService } from '../../../common/services/edit-history.service'
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { UpdateVolumeHasEpubDto } from '../dto/update-volume-has-epub.dto'
+import { RequestWithUser } from '../../../modules/auth/interfaces/request-with-user.interface'
+import { CreateLightNovelVolumeDto } from '../dto/create-lightnovel-volume.dto'
+import { InjectConnection } from '@nestjs/mongoose'
+import { Connection } from 'mongoose'
+import { CounterService } from '../../../modules/shared/services/counter.service'
+import { HikariUserGroup } from '../../../modules/auth/enums/hikari-user-group.enum'
 
 @Injectable()
 export class LightNovelVolumeService {
@@ -14,6 +20,8 @@ export class LightNovelVolumeService {
     @InjectModel(LightNovel.name)
     private lightNovelModel: Model<LightNovelDocument>,
     private readonly editHistoryService: EditHistoryService,
+    @InjectConnection() private readonly connection: Connection,
+    private readonly counterService: CounterService,
   ) {}
 
   async findById(id: string) {
@@ -62,6 +70,65 @@ export class LightNovelVolumeService {
       contributors,
       createdBy,
       lastEditBy,
+    }
+  }
+
+  async createLightNovelVolume(
+    createLightNovelVolumeDto: CreateLightNovelVolumeDto,
+    req: RequestWithUser,
+  ) {
+    const session = await this.connection.startSession()
+    session.startTransaction()
+    try {
+      const volumeId = await this.counterService.getNextSequence('volumeId')
+      const novel = await this.lightNovelModel.findOne({
+        novelId: createLightNovelVolumeDto.novelId,
+      })
+
+      const volume = await this.lightNovelVolumeModel.create(
+        [
+          {
+            ...createLightNovelVolumeDto,
+            volumeId,
+            seriesId: novel._id,
+            status: req.user.hikariUserGroup === HikariUserGroup.CREATOR ? 'pending' : 'published',
+            creator: {
+              userId: new Types.ObjectId(req.user._id),
+              name: req.user.name,
+            },
+          },
+        ],
+        { session },
+      )
+
+      await this.lightNovelModel.findByIdAndUpdate(
+        novel._id,
+        {
+          $push: { 'series.volumes': volume[0]._id },
+        },
+        { new: true, session },
+      )
+
+      await this.editHistoryService.recordEditHistory({
+        type: 'LightNovelVolume',
+        actionType: 'create',
+        volumeId: volumeId.toString(),
+        userId: new Types.ObjectId(req.user._id),
+        userName: req.user.name,
+        changes: '创建了轻小说分卷',
+        previous: null,
+        updated: volume[0].toObject(),
+      })
+
+      await session.commitTransaction()
+      return {
+        volumeId,
+      }
+    } catch (error) {
+      await session.abortTransaction()
+      throw error
+    } finally {
+      await session.endSession()
     }
   }
 

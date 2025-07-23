@@ -16,6 +16,7 @@ export class LightNovelController {
     private readonly lightNovelService: LightNovelService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
+
   @Get('list')
   async getLightNovelList(@Req() req: RequestWithUser, @Query() query: GetLightNovelListDto) {
     const cacheKey = `lightnovel-list-${JSON.stringify(query)}`
