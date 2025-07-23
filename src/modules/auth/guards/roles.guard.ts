@@ -22,6 +22,10 @@ export class RolesGuard implements CanActivate {
     const userRole = user.hikariUserGroup as HikariUserGroup
     const userRoleIndex = ROLE_HIERARCHY[userRole]
 
-    return requiredRoles.some(role => ROLE_HIERARCHY[role] <= userRoleIndex)
+    if (!requiredRoles.includes(HikariUserGroup.SUPER_ADMIN)) {
+      return requiredRoles.some(role => ROLE_HIERARCHY[role] <= userRoleIndex)
+    } else {
+      return userRoleIndex === ROLE_HIERARCHY[HikariUserGroup.SUPER_ADMIN]
+    }
   }
 }
