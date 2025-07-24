@@ -17,6 +17,9 @@ export default () => ({
   galDownload: {
     downloadSignatureSecret: process.env.DOWNLOAD_SIGNATURE_SECRET,
   },
+  novelDownload: {
+    downloadSignatureSecret: process.env.DOWNLOAD_SIGNATURE_SECRET,
+  },
   r2: {
     r2Endpoint: process.env.R2_ENDPOINT,
     novel: {

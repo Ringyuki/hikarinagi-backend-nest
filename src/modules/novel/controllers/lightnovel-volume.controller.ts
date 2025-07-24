@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common'
 import { LightNovelVolumeService } from '../services/lightnovel-volume.service'
 import { Roles } from '../../../modules/auth/decorators/roles.decorator'
 import { HikariUserGroup } from '../../../modules/auth/enums/hikari-user-group.enum'
@@ -17,6 +17,47 @@ export class LightNovelVolumeController {
     const volume = await this.lightNovelVolumeService.findById(id)
     return {
       data: volume,
+    }
+  }
+
+  @Get('/download-signature/:novelId/:volumeId')
+  @UseGuards(JwtAuthGuard)
+  async generateDownloadSignature(
+    @Param('volumeId') volumeId: number,
+    @Param('novelId') novelId: number,
+    @Req() req: RequestWithUser,
+  ) {
+    const { signature, timestamp } = await this.lightNovelVolumeService.generateDownloadSignature(
+      volumeId,
+      novelId,
+      req.user._id.toString(),
+    )
+    return {
+      data: {
+        signature,
+        timestamp,
+      },
+    }
+  }
+
+  @Get('/download/:novelId/:volumeId')
+  @UseGuards(JwtAuthGuard)
+  async generateDownloadUrl(
+    @Param('novelId') novelId: number,
+    @Param('volumeId') volumeId: number,
+    @Query('signature') signature: string,
+    @Query('timestamp') timestamp: number,
+  ) {
+    const { url } = await this.lightNovelVolumeService.generateDownloadUrl(
+      novelId,
+      volumeId,
+      signature,
+      timestamp,
+    )
+    return {
+      data: {
+        url,
+      },
     }
   }
 

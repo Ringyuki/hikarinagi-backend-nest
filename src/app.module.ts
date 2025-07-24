@@ -21,6 +21,7 @@ import { RootAppModule } from './common/modules/app.module'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { TokenExtractionInterceptor } from './common/interceptors/token-extraction.interceptor'
 import { NSFWFilterInterceptor } from './common/interceptors/nsfw-filter.interceptor'
+import { CommentModule } from './modules/comment/comment.module'
 
 @Module({
   imports: [
@@ -101,6 +102,7 @@ import { NSFWFilterInterceptor } from './common/interceptors/nsfw-filter.interce
     GalgameModule,
     MessageModule,
     LightNovelModule,
+    CommentModule,
   ],
   controllers: [],
   providers: [

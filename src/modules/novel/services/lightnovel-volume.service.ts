@@ -1,4 +1,7 @@
 import { Model, Types } from 'mongoose'
+import * as crypto from 'crypto'
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { LightNovel, LightNovelDocument } from '../schemas/light-novel.schema'
 import { LightNovelVolume, LightNovelVolumeDocument } from '../schemas/light-novel-volume.schema'
 import { EditHistoryService } from '../../../common/services/edit-history.service'
@@ -11,9 +14,11 @@ import { InjectConnection } from '@nestjs/mongoose'
 import { Connection } from 'mongoose'
 import { CounterService } from '../../../modules/shared/services/counter.service'
 import { HikariUserGroup } from '../../../modules/auth/enums/hikari-user-group.enum'
+import { HikariConfigService } from '../../../common/config/services/config.service'
 
 @Injectable()
 export class LightNovelVolumeService {
+  private readonly s3Client: S3Client
   constructor(
     @InjectModel(LightNovelVolume.name)
     private lightNovelVolumeModel: Model<LightNovelVolumeDocument>,
@@ -22,7 +27,17 @@ export class LightNovelVolumeService {
     private readonly editHistoryService: EditHistoryService,
     @InjectConnection() private readonly connection: Connection,
     private readonly counterService: CounterService,
-  ) {}
+    private readonly configService: HikariConfigService,
+  ) {
+    this.s3Client = new S3Client({
+      region: 'auto',
+      endpoint: this.configService.get('r2.r2Endpoint'),
+      credentials: {
+        accessKeyId: this.configService.get('r2.novel.r2LightNovelAccessKey'),
+        secretAccessKey: this.configService.get('r2.novel.r2LightNovelSecretKey'),
+      },
+    })
+  }
 
   async findById(id: string) {
     if (isNaN(Number(id))) {
@@ -130,6 +145,54 @@ export class LightNovelVolumeService {
     } finally {
       await session.endSession()
     }
+  }
+
+  async generateDownloadSignature(volumeId: number, novelId: number, userId: string) {
+    const timestamp = Date.now()
+    const dataToSign = `${novelId}-${volumeId}-${userId}-${timestamp}`
+    const signature = crypto
+      .createHmac(
+        'sha256',
+        this.configService.get('novelDownload.downloadSignatureSecret') as string,
+      )
+      .update(dataToSign)
+      .digest('hex')
+
+    return { signature, timestamp }
+  }
+
+  async generateDownloadUrl(
+    novelId: number,
+    volumeId: number,
+    signature: string,
+    timestamp: number,
+  ) {
+    if (!signature || !timestamp) {
+      throw new BadRequestException('signature and timestamp are required')
+    }
+
+    const volume = await this.lightNovelVolumeModel
+      .findOne({ volumeId })
+      .populate('seriesId', 'name')
+      .lean()
+
+    if (!volume) {
+      throw new NotFoundException('找不到指定的分卷')
+    }
+
+    const seriesName = (volume.seriesId as any).name_cn || (volume.seriesId as any).name
+    const fileName = `${seriesName} - ${volume.name_cn || volume.name}.epub`
+
+    const filePath = `${novelId}/${volumeId}/${volumeId}.epub`
+    const command = new GetObjectCommand({
+      Bucket: this.configService.get('r2.novel.r2LightNovelBucket'),
+      Key: filePath,
+      ResponseContentDisposition: `attachment; filename="${encodeURIComponent(fileName)}"`,
+    })
+
+    const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: 300 }) // 链接5分钟有效
+
+    return { url: signedUrl }
   }
 
   async updateHasEpub(volumeId: number, { hasEpub }: UpdateVolumeHasEpubDto) {

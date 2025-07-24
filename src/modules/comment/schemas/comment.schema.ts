@@ -70,6 +70,13 @@ export class Comment {
   isDeleted: boolean
 
   @Prop({
+    type: Boolean,
+    default: false,
+    index: true,
+  })
+  isPinned: boolean
+
+  @Prop({
     type: Types.ObjectId,
     ref: 'Comment',
     default: null,

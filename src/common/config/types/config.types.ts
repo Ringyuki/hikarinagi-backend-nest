@@ -37,6 +37,9 @@ export interface AppConfig {
   galDownload: {
     downloadSignatureSecret?: string
   }
+  novelDownload: {
+    downloadSignatureSecret?: string
+  }
   r2: {
     r2Endpoint?: string
     novel: {
@@ -87,6 +90,7 @@ export type ConfigPath =
   | 'reader.readerSignatureSecret'
   // 下载配置
   | 'galDownload.downloadSignatureSecret'
+  | 'novelDownload.downloadSignatureSecret'
   // R2 配置
   | 'r2.r2Endpoint'
   | 'r2.novel.r2LightNovelAccessKey'
