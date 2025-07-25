@@ -5,7 +5,12 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { LightNovel, LightNovelDocument } from '../schemas/light-novel.schema'
 import { LightNovelVolume, LightNovelVolumeDocument } from '../schemas/light-novel-volume.schema'
 import { EditHistoryService } from '../../../common/services/edit-history.service'
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { UpdateVolumeHasEpubDto } from '../dto/update-volume-has-epub.dto'
 import { RequestWithUser } from '../../../modules/auth/interfaces/request-with-user.interface'
@@ -147,18 +152,24 @@ export class LightNovelVolumeService {
     }
   }
 
-  async generateDownloadSignature(volumeId: number, novelId: number, userId: string) {
-    const timestamp = Date.now()
-    const dataToSign = `${novelId}-${volumeId}-${userId}-${timestamp}`
+  async generateDownloadSignature(
+    volumeId: number,
+    novelId: number,
+    userId: string,
+    timestamp?: number,
+  ) {
+    if (isNaN(Number(novelId)) || isNaN(Number(volumeId))) {
+      throw new BadRequestException('novelId and volumeId must be numbers')
+    }
+
+    const _timestamp = timestamp || Date.now()
+    const dataToSign = `${novelId}-${volumeId}-${userId}-${_timestamp}`
     const signature = crypto
-      .createHmac(
-        'sha256',
-        this.configService.get('novelDownload.downloadSignatureSecret') as string,
-      )
+      .createHmac('sha256', this.configService.get('reader.readerSignatureSecret'))
       .update(dataToSign)
       .digest('hex')
 
-    return { signature, timestamp }
+    return { signature, timestamp: _timestamp }
   }
 
   async generateDownloadUrl(
@@ -166,9 +177,27 @@ export class LightNovelVolumeService {
     volumeId: number,
     signature: string,
     timestamp: number,
+    req: RequestWithUser,
   ) {
     if (!signature || !timestamp) {
       throw new BadRequestException('signature and timestamp are required')
+    }
+    const now = Date.now()
+    const diff = now - timestamp
+    if (diff > 1000 * 60 * 5) {
+      // 5分钟有效
+      throw new BadRequestException('signature is expired')
+    }
+
+    const exceptedSignature = await this.generateDownloadSignature(
+      volumeId,
+      novelId,
+      req.user._id.toString(),
+      timestamp,
+    )
+
+    if (signature !== exceptedSignature.signature) {
+      throw new ForbiddenException('signature is invalid')
     }
 
     const volume = await this.lightNovelVolumeModel
