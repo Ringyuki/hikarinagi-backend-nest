@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { Document, Types } from 'mongoose'
+import { EntityType } from '../dto/create-update-request.dto'
 
 export type UpdateRequestDocument = UpdateRequest & Document
 
@@ -35,7 +36,7 @@ export class UpdateRequest {
     enum: ['Galgame', 'LightNovel', 'LightNovelVolume', 'Producer', 'Person', 'Character'],
     required: true,
   })
-  entityType: string
+  entityType: EntityType
 
   @Prop({
     type: Types.ObjectId,
