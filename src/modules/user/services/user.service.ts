@@ -112,7 +112,7 @@ export class UserService {
       })
       const savedUserSetting = await userSetting.save()
       savedUser.setting = savedUserSetting._id as mongoose.Types.ObjectId
-      return savedUser.toJSON({ includeEmail: true, includeStatus: false, include_id: false })
+      return savedUser.toJSON({ includeEmail: true, includeStatus: false, notInclude_id: true })
     } else {
       existingUnVerifiedUser.password = createUserDto.password
       existingUnVerifiedUser.name = createUserDto.name
@@ -124,7 +124,7 @@ export class UserService {
       return existingUnVerifiedUser.toJSON({
         includeEmail: true,
         includeStatus: false,
-        include_id: false,
+        notInclude_id: true,
       })
     }
   }
@@ -266,7 +266,7 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('用户不存在')
     }
-    return user.toJSON({ includeEmail: true, includeStatus: true, include_id: false })
+    return user.toJSON({ includeEmail: true, includeStatus: true, notInclude_id: true })
   }
 
   async findByEmail(email: string): Promise<UserDocument> {

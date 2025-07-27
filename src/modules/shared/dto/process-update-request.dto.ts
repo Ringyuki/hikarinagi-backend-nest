@@ -1,14 +1,12 @@
 import {
   IsEnum,
   IsNotEmpty,
-  IsMongoId,
   IsString,
   Max,
   IsOptional,
   ValidateBy,
   ValidationArguments,
 } from 'class-validator'
-import { Types } from 'mongoose'
 
 enum Action {
   MERGE = 'merge',
@@ -19,11 +17,6 @@ export class ProcessUpdateRequestDto {
   @IsNotEmpty()
   @IsEnum(Action)
   action: Action
-
-  @IsNotEmpty()
-  @IsString()
-  @IsMongoId()
-  processedBy: Types.ObjectId
 
   @IsNotEmpty()
   @IsString()

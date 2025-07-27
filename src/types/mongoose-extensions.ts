@@ -12,6 +12,7 @@ declare module 'mongoose' {
 
     // for galgame schema
     onlyDownloadInfo?: boolean
+    transformToUpdateRequestFormat?: boolean
   }
 }
 
@@ -27,4 +28,5 @@ export interface CharacterToObjectOptions extends MongooseToObjectOptions {
 
 export interface GalgameToObjectOptions extends MongooseToObjectOptions {
   onlyDownloadInfo?: boolean
+  transformToUpdateRequestFormat?: boolean
 }

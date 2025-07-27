@@ -54,6 +54,11 @@ export interface AppConfig {
     clientId?: string
     clientSecret?: string
   }
+  version: {
+    major: number
+    minor: number
+    suffix: string
+  }
 }
 
 // 合并所有配置类型
@@ -98,7 +103,10 @@ export type ConfigPath =
   // Bangumi 配置
   | 'bangumi.clientId'
   | 'bangumi.clientSecret'
-
+  // 版本配置
+  | 'version.major'
+  | 'version.minor'
+  | 'version.suffix'
 // 根据配置路径获取对应的类型
 export type ConfigPathValue<T extends ConfigPath> = T extends 'jwt.secret'
   ? string
@@ -154,4 +162,10 @@ export type ConfigPathValue<T extends ConfigPath> = T extends 'jwt.secret'
                                                     ? string | undefined
                                                     : T extends 'bangumi.clientSecret'
                                                       ? string | undefined
-                                                      : never
+                                                      : T extends 'version.major'
+                                                        ? number
+                                                        : T extends 'version.minor'
+                                                          ? number
+                                                          : T extends 'version.suffix'
+                                                            ? string
+                                                            : never

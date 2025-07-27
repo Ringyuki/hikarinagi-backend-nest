@@ -6,6 +6,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 import { EnvironmentValidator } from './common/config/validators/env.validator'
 import * as cookieParser from 'cookie-parser'
+import { VersionService } from './common/services/version.service'
 
 EnvironmentValidator.validateEnvironment()
 
@@ -29,9 +30,9 @@ async function bootstrap() {
     }),
   )
   // 全局响应拦截器
-  app.useGlobalInterceptors(new TransformInterceptor())
+  app.useGlobalInterceptors(new TransformInterceptor(app.get(VersionService)))
   // 全局异常过滤器
-  app.useGlobalFilters(new HttpExceptionFilter())
+  app.useGlobalFilters(new HttpExceptionFilter(app.get(VersionService)))
   // CORS
   app.enableCors({
     origin: true,

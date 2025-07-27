@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { Document, Types } from 'mongoose'
+import { GalgameToObjectOptions } from '../../../types/mongoose-extensions'
 
 @Schema({ _id: false })
 export class GalgameProducer {
@@ -144,7 +145,7 @@ export class GalgameCreator {
 @Schema({
   timestamps: true,
   toJSON: {
-    transform: (_, ret, options) => {
+    transform: (_, ret, options: GalgameToObjectOptions) => {
       if (options.onlyDownloadInfo) {
         for (const key in ret) {
           if (key !== 'downloadInfo') {
@@ -153,6 +154,68 @@ export class GalgameCreator {
         }
         return ret
       }
+
+      if (options.transformToUpdateRequestFormat) {
+        if (ret.producers && Array.isArray(ret.producers)) {
+          ret.producers = ret.producers.map(producer => ({
+            _id: producer.producer?._id || producer.producer,
+            name: producer.producer?.name || '',
+            logo: producer.producer?.logo || '',
+            note: producer.note || '',
+          }))
+        }
+        if (ret.tags && Array.isArray(ret.tags)) {
+          ret.tags = ret.tags.map(tag => ({
+            _id: tag.tag?._id || tag.tag,
+            name: tag.tag?.name || '',
+          }))
+        }
+        if (ret.staffs && Array.isArray(ret.staffs)) {
+          ret.staffs = ret.staffs.map(staff => ({
+            _id: staff.person?._id || staff.person,
+            name: staff.person?.name || '',
+            image: staff.person?.image || '',
+            role: staff.role || '',
+          }))
+        }
+        if (ret.characters && Array.isArray(ret.characters)) {
+          ret.characters = ret.characters.map(character => ({
+            _id: character.character?._id || character.character,
+            name: character.character?.name || '',
+            image: character.character?.image || '',
+            role: character.role || '',
+          }))
+        }
+        if (ret.creator) {
+          ret.creator = {
+            _id: ret.creator.userId?._id || ret.creator.userId,
+            name: ret.creator.name || '',
+            avatar: ret.creator.userId?.avatar || '',
+            userId: ret.creator.userId?.userId || '',
+          }
+        }
+        if (ret.downloadInfo) {
+          delete ret.downloadInfo.viewTimes
+          delete ret.downloadInfo.downloadTimes
+          if (ret.downloadInfo.fileInfos) {
+            for (const fileInfo of ret.downloadInfo.fileInfos) {
+              if (!fileInfo.AIInfos) {
+                fileInfo.AIInfos = {
+                  provider: '',
+                  model: '',
+                }
+              }
+            }
+          }
+        }
+        delete ret.__v
+        delete ret._id
+        delete ret.views
+        delete ret.createdAt
+        delete ret.updatedAt
+        return ret
+      }
+
       delete ret.__v
       delete ret.createdAt
       delete ret.updatedAt
@@ -238,7 +301,7 @@ export class Galgame {
     enum: ['pending', 'published', 'rejected', 'deleted', 'draft'],
     default: 'published',
   })
-  status: string
+  status: 'pending' | 'published' | 'rejected' | 'deleted' | 'draft'
 
   @Prop({ type: GalgameCreator })
   creator: GalgameCreator

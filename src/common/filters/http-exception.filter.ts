@@ -8,10 +8,13 @@ import {
 } from '@nestjs/common'
 import { Response, Request } from 'express'
 import { ApiResponse } from '../interfaces/response.interface'
+import { VersionService } from '../services/version.service'
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name)
+
+  constructor(private readonly versionService: VersionService) {}
 
   catch(exception: HttpException | Error, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
@@ -63,7 +66,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const responseBody: ApiResponse<null> = {
       success: false,
       code: status,
-      version: 'v2 dev',
+      version: this.versionService.getVersion(),
       message: message || '请求发生错误',
       data: null,
       timestamp,

@@ -65,7 +65,9 @@ export class UpdateRequestService {
     processUpdateRequestDto: ProcessUpdateRequestDto,
     req: RequestWithUser,
   ) {
-    const { action, processedBy, rejectionReason } = processUpdateRequestDto
+    const { action, rejectionReason } = processUpdateRequestDto
+    const processedBy = new Types.ObjectId(req.user._id)
+
     const updateRequest = await this.updateRequestModel.findById(updateRequestId)
     if (!updateRequest) {
       throw new NotFoundException('Update request not found')
@@ -141,13 +143,6 @@ export class UpdateRequestService {
       .lean()
 
     requests.forEach(request => {
-      delete (request.changes.previous as any)._id
-      delete (request.changes.previous as any).__v
-      delete (request.changes.previous as any).creator
-      delete (request.changes.updated as any).__v
-      delete (request.changes.updated as any)._id
-      delete (request.changes.updated as any).creator
-
       delete (request.changes.previous as any).views
       delete (request.changes.updated as any).views
       delete (request.changes.previous as any).novelId

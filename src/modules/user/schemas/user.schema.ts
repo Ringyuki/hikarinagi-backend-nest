@@ -21,7 +21,7 @@ export type UserDocument = User &
         ret.followersCount = ret.followers.length
         ret.followingCount = ret.following.length
       }
-      if (!options.include_id) {
+      if (options.notInclude_id) {
         delete ret._id
       }
       delete ret.password

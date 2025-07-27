@@ -8,9 +8,12 @@ import {
 import { Observable } from 'rxjs'
 import { map } from 'rxjs/operators'
 import { ApiResponse } from '../interfaces/response.interface'
+import { VersionService } from '../services/version.service'
 
 @Injectable()
 export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T>> {
+  constructor(private readonly versionService: VersionService) {}
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<ApiResponse<T>> {
     if (context.switchToHttp().getRequest().url.includes('health')) {
       return next.handle()
@@ -26,7 +29,7 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ApiResponse<T
         return {
           success: true,
           code: data?.code || statusCode || HttpStatus.OK,
-          version: 'v2 dev',
+          version: this.versionService.getVersion(),
           message: data.message || '',
           data: data.data,
           cached: data.cached || false,

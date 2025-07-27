@@ -22,6 +22,8 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { TokenExtractionInterceptor } from './common/interceptors/token-extraction.interceptor'
 import { NSFWFilterInterceptor } from './common/interceptors/nsfw-filter.interceptor'
 import { CommentModule } from './modules/comment/comment.module'
+import { CreatorCenterModule } from './modules/creator-center/creator-center.module'
+import { VersionService } from './common/services/version.service'
 
 @Module({
   imports: [
@@ -103,6 +105,7 @@ import { CommentModule } from './modules/comment/comment.module'
     MessageModule,
     LightNovelModule,
     CommentModule,
+    CreatorCenterModule,
   ],
   controllers: [],
   providers: [
@@ -118,6 +121,7 @@ import { CommentModule } from './modules/comment/comment.module'
       provide: APP_INTERCEPTOR,
       useClass: NSFWFilterInterceptor,
     },
+    VersionService,
   ],
 })
 export class AppModule {}

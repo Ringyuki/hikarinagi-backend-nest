@@ -37,4 +37,9 @@ export default () => ({
     clientId: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
   },
+  version: {
+    major: parseInt(process.env.VERSION_MAJOR || '2', 10),
+    minor: parseInt(process.env.VERSION_MINOR || '0', 10),
+    suffix: process.env.VERSION_SUFFIX || 'alpha',
+  },
 })
