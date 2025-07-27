@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
-import { HikariConfigService } from 'src/common/config/configs'
+import { HikariConfigService } from '../../../common/config/services/config.service'
 import { HttpService } from '@nestjs/axios'
 import { promises as fs } from 'fs'
 import { join } from 'path'

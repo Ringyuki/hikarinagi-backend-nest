@@ -1,9 +1,9 @@
 import { Controller, Post, Param, UseGuards } from '@nestjs/common'
 import { CommentService } from '../services/comment.service'
-import { Roles } from 'src/modules/auth/decorators/roles.decorator'
-import { HikariUserGroup } from 'src/modules/auth/enums/hikari-user-group.enum'
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard'
-import { RolesGuard } from 'src/modules/auth/guards/roles.guard'
+import { Roles } from '../../auth/decorators/roles.decorator'
+import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
+import { RolesGuard } from '../../auth/guards/roles.guard'
 
 @Controller('comment')
 export class CommentController {

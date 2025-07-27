@@ -13,7 +13,7 @@ export class AppController {
   getAppInfo() {
     return {
       name: 'Hikarinagi backend nestjs',
-      version: '0.0.1',
+      version: this.versionService.getVersion(),
       message: '',
       environment: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString(),

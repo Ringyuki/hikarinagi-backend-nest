@@ -1,12 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { ConfigService } from '@nestjs/config'
 import { AppController } from './app.controller'
+import { VersionService } from '../services/version.service'
 
 describe('AppController', () => {
   let controller: AppController
 
   const mockConfigService = {
     get: jest.fn(),
+  }
+
+  const mockVersionService = {
+    getVersion: jest.fn().mockReturnValue('2.0.123-alpha.abc123'),
+    getVersionInfo: jest.fn().mockResolvedValue({
+      version: '2.0.123-alpha.abc123',
+      commitHash: 'abc123',
+      commitCount: 123,
+      generatedAt: new Date(),
+    }),
   }
 
   beforeEach(async () => {
@@ -16,6 +27,10 @@ describe('AppController', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: VersionService,
+          useValue: mockVersionService,
         },
       ],
     }).compile()
@@ -32,11 +47,12 @@ describe('AppController', () => {
       const result = controller.getAppInfo()
       expect(result).toEqual({
         name: 'Hikarinagi backend nestjs',
-        version: '0.0.1',
+        version: '2.0.123-alpha.abc123',
         message: '',
         environment: expect.any(String),
         timestamp: expect.any(String),
       })
+      expect(mockVersionService.getVersion).toHaveBeenCalled()
     })
   })
 
@@ -45,7 +61,9 @@ describe('AppController', () => {
       const result = controller.getHealth()
       expect(result).toEqual({
         status: 'ok',
+        version: '2.0.123-alpha.abc123',
       })
+      expect(mockVersionService.getVersion).toHaveBeenCalled()
     })
   })
 })

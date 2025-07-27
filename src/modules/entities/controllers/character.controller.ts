@@ -1,6 +1,6 @@
 import { Controller, Inject, Get, Param, Req } from '@nestjs/common'
 import { CharacterService } from '../services/character.service'
-import { RequestWithUser } from 'src/modules/auth/interfaces/request-with-user.interface'
+import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
 

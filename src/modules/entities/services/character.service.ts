@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
 import { Character, CharacterDocument } from '../schemas/character.schema'
-import { RequestWithUser } from 'src/modules/auth/interfaces/request-with-user.interface'
+import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
 
 @Injectable()
 export class CharacterService {

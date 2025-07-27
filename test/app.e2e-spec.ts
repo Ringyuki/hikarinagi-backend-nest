@@ -27,7 +27,7 @@ describe('Application (e2e)', () => {
         .expect(200)
         .expect(res => {
           expect(res.body).toHaveProperty('name', 'Hikarinagi backend nestjs')
-          expect(res.body).toHaveProperty('version', '0.0.1')
+          expect(res.body).toHaveProperty('version')
           expect(res.body).toHaveProperty('environment')
           expect(res.body).toHaveProperty('timestamp')
         })
@@ -41,6 +41,7 @@ describe('Application (e2e)', () => {
         .expect(200)
         .expect(res => {
           expect(res.body).toHaveProperty('status', 'ok')
+          expect(res.body).toHaveProperty('version')
         })
     })
   })

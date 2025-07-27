@@ -21,7 +21,7 @@ import { EntityRelationsSyncService } from '../../../common/services/entity-rela
 import { EntityType } from '../dto/create-update-request.dto'
 import { SystemMessageService } from '../../../modules/message/services/system-message.service'
 import { MergeUpdateRequestDto } from '../dto/merge-update-request.dto'
-import { SystemMessageType } from 'src/modules/message/dto/send-system-message.dto'
+import { SystemMessageType } from '../../message/dto/send-system-message.dto'
 
 interface UpdateItemParams {
   itemType?: EntityType

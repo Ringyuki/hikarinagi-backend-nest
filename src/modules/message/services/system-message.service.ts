@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common'
 import { SystemMessage, SystemMessageDocument } from '../schemas/system-message.schema'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
-import { CounterService } from 'src/modules/shared/services/counter.service'
+import { CounterService } from '../../shared/services/counter.service'
 import { SendSystemMessageDto } from '../dto/send-system-message.dto'
-import { CounterName } from 'src/modules/shared/types/couters.type'
+import { CounterName } from '../../shared/types/couters.type'
 
 @Injectable()
 export class SystemMessageService {
