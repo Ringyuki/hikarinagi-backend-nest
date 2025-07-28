@@ -141,6 +141,7 @@ export class UserService {
 
     const user = await this.userModel.findOne({
       $or: [{ name: identifier }, { email: identifier }],
+      isVerified: true,
     })
 
     if (!user) {
