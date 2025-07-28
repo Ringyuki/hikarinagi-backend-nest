@@ -140,7 +140,19 @@ export class UpdateRequestService {
       .limit(limit)
       .populate('requestedBy', 'userId name avatar')
       .populate('processedBy', 'userId name avatar')
+      .populate(
+        'entityId',
+        'galId novelId volumeId id cover image logo transTitle originTitle name name_cn transName',
+      )
       .lean()
+
+    requests.forEach(request => {
+      ;(request as any).entityInfo = {
+        ...request.entityId,
+      }
+      request.entityId = request.entityId._id
+      delete (request as any).entityInfo._id
+    })
 
     requests.forEach(request => {
       delete (request.changes.previous as any).views

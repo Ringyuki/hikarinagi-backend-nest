@@ -123,10 +123,10 @@ export class DownloadInfo {
   @Prop({ type: Boolean, default: false })
   downloadable: boolean
 
-  @Prop({ type: Number, default: 0 })
+  @Prop({ type: Number, default: 0, immutable: true })
   viewTimes: number
 
-  @Prop({ type: Number, default: 0 })
+  @Prop({ type: Number, default: 0, immutable: true })
   downloadTimes: number
 
   @Prop({ type: [DownloadFileInfo] })

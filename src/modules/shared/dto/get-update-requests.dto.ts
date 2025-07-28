@@ -1,11 +1,20 @@
 import { IsNotEmpty, IsNumber, IsOptional, IsEnum, Min } from 'class-validator'
 import { Type } from 'class-transformer'
-import { EntityType } from './create-update-request.dto'
 
 enum Status {
   PENDING = 'pending',
   MERGED = 'merged',
   REJECTED = 'rejected',
+  ALL = '',
+}
+enum EntityType {
+  Galgame = 'Galgame',
+  LightNovel = 'LightNovel',
+  LightNovelVolume = 'LightNovelVolume',
+  Producer = 'Producer',
+  Person = 'Person',
+  Character = 'Character',
+  All = '',
 }
 
 export class GetUpdateRequestsDto {
