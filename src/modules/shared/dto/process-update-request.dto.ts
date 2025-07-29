@@ -2,7 +2,7 @@ import {
   IsEnum,
   IsNotEmpty,
   IsString,
-  Max,
+  Length,
   IsOptional,
   ValidateBy,
   ValidationArguments,
@@ -18,9 +18,8 @@ export class ProcessUpdateRequestDto {
   @IsEnum(Action)
   action: Action
 
-  @IsNotEmpty()
   @IsString()
-  @Max(100)
+  @Length(1, 100)
   @IsOptional()
   @ValidateBy({
     name: 'rejectionReason',

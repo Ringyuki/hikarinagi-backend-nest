@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { Document, Types } from 'mongoose'
+import { LightNovelToObjectOptions } from '../../../types/mongoose-extensions'
 
 export type LightNovelVolumeDocument = LightNovelVolume & Document
 
@@ -28,6 +29,19 @@ export class LightNovelVolumeCreator {
 @Schema({
   timestamps: true,
   versionKey: false,
+  toJSON: {
+    transform: (_, ret, options: LightNovelToObjectOptions) => {
+      if (options.transformToUpdateRequestFormat) {
+        delete ret._id
+        delete ret.__v
+        delete ret.createdAt
+        delete ret.updatedAt
+        return ret
+      }
+      delete ret.__v
+      return ret
+    },
+  },
 })
 export class LightNovelVolume {
   @Prop({

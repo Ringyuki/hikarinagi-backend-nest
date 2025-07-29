@@ -301,7 +301,7 @@ export class UpdateRequestMergeService {
     if (
       params.mergeData.series &&
       (!Array.isArray(params.mergeData.series.volumes) ||
-        !params.mergeData.series.volumes.every(v => v && v._id))
+        !params.mergeData.series.volumes.every(v => (v && v._id) || typeof v === 'string'))
     ) {
       throw new BadRequestException('invalid series format')
     }
@@ -351,7 +351,9 @@ export class UpdateRequestMergeService {
       }))
     }
     if (params.mergeData.series) {
-      const volumes = params.mergeData.series.volumes.map(volume => volume._id)
+      const volumes = params.mergeData.series.volumes.map(volume =>
+        volume._id ? volume._id : volume,
+      )
       updateData.series = {
         totalVolumes: params.mergeData.series.totalVolumes || null,
         volumes,

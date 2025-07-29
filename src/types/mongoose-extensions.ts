@@ -30,3 +30,7 @@ export interface GalgameToObjectOptions extends MongooseToObjectOptions {
   onlyDownloadInfo?: boolean
   transformToUpdateRequestFormat?: boolean
 }
+
+export interface LightNovelToObjectOptions extends MongooseToObjectOptions {
+  transformToUpdateRequestFormat?: boolean
+}

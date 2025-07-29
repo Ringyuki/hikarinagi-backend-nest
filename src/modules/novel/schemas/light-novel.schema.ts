@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { Document, Types } from 'mongoose'
+import { LightNovelToObjectOptions } from '../../../types/mongoose-extensions'
 
 export type LightNovelDocument = LightNovel & Document
 
@@ -93,6 +94,65 @@ export class LightNovelCreator {
 @Schema({
   timestamps: true,
   versionKey: false,
+  toJSON: {
+    transform: (_, ret, options: LightNovelToObjectOptions) => {
+      if (options.transformToUpdateRequestFormat) {
+        if (ret.author) {
+          ret.author = {
+            _id: ret.author._id,
+            name: ret.author.name,
+            image: ret.author.image,
+          }
+        }
+        if (ret.illustrators && Array.isArray(ret.illustrators)) {
+          ret.illustrators = ret.illustrators.map(i => ({
+            _id: i.illustrator?._id || i.illustrator,
+            name: i.illustrator?.name || '',
+            image: i.illustrator?.image || '',
+            note: i.note || '',
+          }))
+        }
+        if (ret.publishers) {
+          const publishersArray = Array.isArray(ret.publishers) ? ret.publishers : [ret.publishers]
+          ret.publishers = publishersArray.map(publisher => ({
+            _id: publisher.publisher?._id || publisher.publisher,
+            name: publisher.publisher?.name || '',
+            logo: publisher.publisher?.logo || '',
+            note: publisher.note || '',
+          }))
+        }
+        if (ret.bunko) {
+          ret.bunko = {
+            _id: ret.bunko._id,
+            name: ret.bunko.name,
+            logo: ret.bunko.logo,
+          }
+        }
+        if (ret.characters && Array.isArray(ret.characters)) {
+          ret.characters = ret.characters.map(c => ({
+            _id: c.character?._id || c.character,
+            name: c.character?.name || '',
+            image: c.character?.image || '',
+            role: c.role || '',
+          }))
+        }
+        if (ret.tags && Array.isArray(ret.tags)) {
+          ret.tags = ret.tags.map(t => ({
+            _id: t.tag?._id || t.tag,
+            name: t.tag?.name || '',
+          }))
+        }
+        delete ret.__v
+        delete ret._id
+        delete ret.views
+        delete ret.createdAt
+        delete ret.updatedAt
+        return ret
+      }
+      delete ret.__v
+      return ret
+    },
+  },
 })
 export class LightNovel {
   @Prop({

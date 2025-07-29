@@ -34,7 +34,7 @@ export class GalgameManagementService {
 
     const exisitedRequest = await this.updateRequestModel.findOne({
       entityId: galgame._id,
-      requestedBy: req.user._id,
+      requestedBy: new Types.ObjectId(req.user._id),
       status: 'pending',
     })
     if (exisitedRequest) {

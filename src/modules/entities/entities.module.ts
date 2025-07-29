@@ -21,7 +21,7 @@ import { CharacterController } from './controllers/character.controller'
     ]),
   ],
   providers: [PersonService, ProducerService, CharacterService, TagService],
-  exports: [PersonService, ProducerService, CharacterService, TagService],
+  exports: [PersonService, ProducerService, CharacterService, TagService, MongooseModule],
   controllers: [CharacterController],
 })
 export class EntitiesModule {}
