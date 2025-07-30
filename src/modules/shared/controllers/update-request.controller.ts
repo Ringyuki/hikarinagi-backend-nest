@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Query, Req, UseGuards } from '@nestjs/common'
 import { UpdateRequestService } from '../services/update-request.service'
 import { GetUpdateRequestsDto } from '../dto/get-update-requests.dto'
+import { GetUpdateRequestsByEntityParamsDto } from '../dto/get-update-requests-by-entity-params.dto'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../../auth/guards/roles.guard'
 import { Roles } from '../../auth/decorators/roles.decorator'
@@ -18,6 +19,14 @@ export class UpdateRequestController {
   @Get('me')
   async getUpdateRequests(@Query() options: GetUpdateRequestsDto, @Req() req: RequestWithUser) {
     const requests = await this.updateRequestService.getUserUpdateRequests(req, options)
+    return {
+      data: requests,
+    }
+  }
+
+  @Get(':entityType/:entityId')
+  async getUpdateRequestsByEntity(@Param() params: GetUpdateRequestsByEntityParamsDto) {
+    const requests = await this.updateRequestService.getUpdateRequestsByEntity(params)
     return {
       data: requests,
     }

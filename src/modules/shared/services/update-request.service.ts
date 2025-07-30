@@ -13,6 +13,7 @@ import { ProcessUpdateRequestDto } from '../dto/process-update-request.dto'
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface'
 import { UpdateRequestMergeService } from './update-request-merge.service'
 import { RequestWithUser } from '../../../modules/auth/interfaces/request-with-user.interface'
+import { GetUpdateRequestsByEntityParamsDto } from '../dto/get-update-requests-by-entity-params.dto'
 
 @Injectable()
 export class UpdateRequestService {
@@ -177,5 +178,27 @@ export class UpdateRequestService {
         currentPage: page,
       },
     }
+  }
+
+  async getUpdateRequestsByEntity(
+    params: GetUpdateRequestsByEntityParamsDto,
+  ): Promise<Array<{ changes: any; createdAt: Date }>> {
+    const { entityType, entityId } = params
+    const requests: any[] = await this.updateRequestModel
+      .find({
+        entityType,
+        entityId: new Types.ObjectId(entityId),
+        status: 'merged',
+      })
+      .select('requestedBy changes createdAt')
+      .populate('requestedBy', 'userId name avatar')
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec()
+    return requests.map(req => ({
+      requestedBy: req.requestedBy,
+      changes: req.changes,
+      createdAt: req.createdAt,
+    }))
   }
 }
