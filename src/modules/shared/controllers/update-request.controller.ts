@@ -11,12 +11,12 @@ import { Types } from 'mongoose'
 import { ProcessUpdateRequestDto } from '../dto/process-update-request.dto'
 
 @Controller('update-request/requests')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(HikariUserGroup.CREATOR)
 export class UpdateRequestController {
   constructor(private readonly updateRequestService: UpdateRequestService) {}
 
   @Get('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(HikariUserGroup.CREATOR)
   async getUpdateRequests(@Query() options: GetUpdateRequestsDto, @Req() req: RequestWithUser) {
     const requests = await this.updateRequestService.getUserUpdateRequests(req, options)
     return {
@@ -25,6 +25,7 @@ export class UpdateRequestController {
   }
 
   @Get(':entityType/:entityId')
+  @UseGuards(JwtAuthGuard)
   async getUpdateRequestsByEntity(@Param() params: GetUpdateRequestsByEntityParamsDto) {
     const requests = await this.updateRequestService.getUpdateRequestsByEntity(params)
     return {
@@ -33,6 +34,8 @@ export class UpdateRequestController {
   }
 
   @Get('auditable')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(HikariUserGroup.CREATOR)
   async getAuditableUpdateRequests(
     @Query() options: GetUpdateRequestsDto,
     @Req() req: RequestWithUser,
@@ -44,6 +47,8 @@ export class UpdateRequestController {
   }
 
   @Patch(':id/process')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(HikariUserGroup.CREATOR)
   async processUpdateRequest(
     @Param('id') id: string,
     @Req() req: RequestWithUser,
