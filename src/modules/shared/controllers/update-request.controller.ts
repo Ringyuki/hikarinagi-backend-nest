@@ -24,15 +24,6 @@ export class UpdateRequestController {
     }
   }
 
-  @Get(':entityType/:entityId')
-  @UseGuards(JwtAuthGuard)
-  async getUpdateRequestsByEntity(@Param() params: GetUpdateRequestsByEntityParamsDto) {
-    const requests = await this.updateRequestService.getUpdateRequestsByEntity(params)
-    return {
-      data: requests,
-    }
-  }
-
   @Get('auditable')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(HikariUserGroup.CREATOR)
@@ -43,6 +34,24 @@ export class UpdateRequestController {
     const requests = await this.updateRequestService.getUserAuditableUpdateRequests(req, options)
     return {
       data: requests,
+    }
+  }
+
+  @Get(':entityType/:entityId')
+  @UseGuards(JwtAuthGuard)
+  async getUpdateRequestsByEntity(@Param() params: GetUpdateRequestsByEntityParamsDto) {
+    const requests = await this.updateRequestService.getUpdateRequestsByEntity(params)
+    return {
+      data: requests,
+    }
+  }
+
+  @Get(':updateRequestId')
+  @UseGuards(JwtAuthGuard)
+  async getUpdateRequestById(@Param('updateRequestId') updateRequestId: Types.ObjectId) {
+    const request = await this.updateRequestService.getUpdateRequestById(updateRequestId)
+    return {
+      data: request,
     }
   }
 

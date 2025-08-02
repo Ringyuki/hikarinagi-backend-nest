@@ -182,7 +182,7 @@ export class UpdateRequestService {
 
   async getUpdateRequestsByEntity(
     params: GetUpdateRequestsByEntityParamsDto,
-  ): Promise<Array<{ changes: any; createdAt: Date }>> {
+  ): Promise<Array<{ _id: Types.ObjectId; createdAt: Date; requestedBy: any }>> {
     const { entityType, entityId } = params
     const requests: any[] = await this.updateRequestModel
       .find({
@@ -190,14 +190,14 @@ export class UpdateRequestService {
         entityId: new Types.ObjectId(entityId),
         status: 'merged',
       })
-      .select('requestedBy changes createdAt')
+      .select('_id requestedBy createdAt')
       .populate('requestedBy', 'userId name avatar')
       .sort({ createdAt: -1 })
       .lean()
       .exec()
     return requests.map(req => ({
+      _id: req._id,
       requestedBy: req.requestedBy,
-      changes: req.changes,
       createdAt: req.createdAt,
     }))
   }
