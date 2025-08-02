@@ -5,9 +5,10 @@ import { RequestWithUser } from '../../auth/interfaces/request-with-user.interfa
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { Roles } from '../../auth/decorators/roles.decorator'
 import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
+import { RolesGuard } from '../../auth/guards/roles.guard'
 
 @Controller('creator-center/lightnovel/volume')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(HikariUserGroup.CREATOR)
 export class LightNovelVolumeManagementController {
   constructor(

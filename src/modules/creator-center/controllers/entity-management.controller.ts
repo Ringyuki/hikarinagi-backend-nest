@@ -4,9 +4,10 @@ import { EntityType, GetEntityListDto } from '../dto/get-entity-list.dto'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { Roles } from '../../auth/decorators/roles.decorator'
 import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
+import { RolesGuard } from '../../auth/guards/roles.guard'
 
 @Controller('creator-center/entity')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(HikariUserGroup.CREATOR)
 export class EntityManagementController {
   constructor(private readonly entityManagementService: EntityManagementService) {}

@@ -6,9 +6,10 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { UseGuards } from '@nestjs/common'
 import { Roles } from '../../auth/decorators/roles.decorator'
 import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
+import { RolesGuard } from '../../auth/guards/roles.guard'
 
 @Controller('creator-center/galgame')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(HikariUserGroup.CREATOR)
 export class GalgameManagementController {
   constructor(private readonly galgameManagementService: GalgameManagementService) {}
