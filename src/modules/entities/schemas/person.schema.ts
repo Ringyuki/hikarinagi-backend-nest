@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { Document, Types } from 'mongoose'
+import { PersonToObjectOptions } from '../../../types/mongoose-extensions'
 
 export type PersonDocument = Person & Document
 
@@ -19,7 +20,7 @@ export class Work {
   work: Types.ObjectId
 }
 
-@Schema()
+@Schema({ _id: false })
 export class Label {
   @Prop({ type: String, required: true })
   key: string
@@ -41,7 +42,26 @@ export class Creator {
   name: string
 }
 
-@Schema({ timestamps: true })
+@Schema({
+  timestamps: true,
+  toJSON: {
+    transform: (_, ret, options: PersonToObjectOptions) => {
+      if (options._transformToUpdateRequestFormat) {
+        const _ret = {
+          aliases: ret.aliases,
+          name: ret.name,
+          transName: ret.transName,
+          intro: ret.intro,
+          transIntro: ret.transIntro,
+          image: ret.image,
+          labels: ret.labels.map(label => ({ key: label.key, value: label.value })),
+          status: ret.status,
+        }
+        return _ret
+      }
+    },
+  },
+})
 export class Person {
   @Prop({
     type: Number,

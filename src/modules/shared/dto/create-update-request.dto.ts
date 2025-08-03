@@ -16,6 +16,7 @@ export enum EntityType {
   Producer = 'Producer',
   Person = 'Person',
   Character = 'Character',
+  Tag = 'Tag',
 }
 
 class UpdateRequestChanges {

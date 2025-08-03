@@ -20,7 +20,7 @@ export class Work {
   work: Types.ObjectId
 }
 
-@Schema()
+@Schema({ _id: false })
 export class Label {
   @Prop({ type: String, required: true })
   key: string
@@ -61,6 +61,19 @@ export class Creator {
   timestamps: true,
   toJSON: {
     transform: (_, ret, options: CharacterToObjectOptions) => {
+      if (options._transformToUpdateRequestFormat) {
+        const _ret = {
+          name: ret.name,
+          transName: ret.transName,
+          aliases: ret.aliases,
+          intro: ret.intro,
+          transIntro: ret.transIntro,
+          image: ret.image,
+          labels: ret.labels.map(label => ({ key: label.key, value: label.value })),
+          status: ret.status,
+        }
+        return _ret
+      }
       if (options.notInclude_id) {
         delete ret._id
       }

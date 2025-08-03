@@ -49,18 +49,21 @@ export class LightNovelVolumeManagementService {
     delete updatedVolume.createdAt
     const originalVolume = volume.toJSON({ transformToUpdateRequestFormat: true })
 
-    await this.updateRequestService.createUpdateRequest({
-      entityType: EntityType.LightNovelVolume,
-      entityId: volume._id as Types.ObjectId,
-      title: 'LightNovelVolume 更新请求',
-      description: `更新 LightNovelVolume 条目: ${volume.name}`,
-      requestedBy: new Types.ObjectId(req.user._id),
-      changes: {
-        previous: originalVolume,
-        updated: updatedVolume,
-        changedFields: Object.keys(updatedVolume),
+    await this.updateRequestService.createUpdateRequest(
+      {
+        entityType: EntityType.LightNovelVolume,
+        entityId: volume._id as Types.ObjectId,
+        title: 'LightNovelVolume 更新请求',
+        description: `更新 LightNovelVolume 条目: ${volume.name}`,
+        requestedBy: new Types.ObjectId(req.user._id),
+        changes: {
+          previous: originalVolume,
+          updated: updatedVolume,
+          changedFields: Object.keys(updatedVolume),
+        },
       },
-    })
+      req,
+    )
 
     return {
       original: originalVolume,

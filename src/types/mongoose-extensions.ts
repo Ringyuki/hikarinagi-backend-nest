@@ -24,6 +24,7 @@ export interface UserToObjectOptions extends MongooseToObjectOptions {
 
 export interface CharacterToObjectOptions extends MongooseToObjectOptions {
   notInclude_id?: boolean
+  _transformToUpdateRequestFormat?: boolean
 }
 
 export interface GalgameToObjectOptions extends MongooseToObjectOptions {
@@ -33,4 +34,12 @@ export interface GalgameToObjectOptions extends MongooseToObjectOptions {
 
 export interface LightNovelToObjectOptions extends MongooseToObjectOptions {
   transformToUpdateRequestFormat?: boolean
+}
+
+export interface PersonToObjectOptions extends MongooseToObjectOptions {
+  _transformToUpdateRequestFormat?: boolean
+}
+
+export interface ProducerToObjectOptions extends MongooseToObjectOptions {
+  _transformToUpdateRequestFormat?: boolean
 }

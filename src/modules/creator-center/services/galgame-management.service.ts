@@ -50,18 +50,21 @@ export class GalgameManagementService {
     }
     const originalGalgame = galgame.toJSON({ transformToUpdateRequestFormat: true })
 
-    await this.updateRequestService.createUpdateRequest({
-      entityType: EntityType.Galgame,
-      entityId: galgame._id as Types.ObjectId,
-      title: 'Galgame 更新请求',
-      description: '更新 Galgame 条目',
-      requestedBy: new Types.ObjectId(req.user._id),
-      changes: {
-        previous: originalGalgame,
-        updated: updatedGalgame,
-        changedFields: Object.keys(updatedGalgame),
+    await this.updateRequestService.createUpdateRequest(
+      {
+        entityType: EntityType.Galgame,
+        entityId: galgame._id as Types.ObjectId,
+        title: 'Galgame 更新请求',
+        description: '更新 Galgame 条目',
+        requestedBy: new Types.ObjectId(req.user._id),
+        changes: {
+          previous: originalGalgame,
+          updated: updatedGalgame,
+          changedFields: Object.keys(updatedGalgame),
+        },
       },
-    })
+      req,
+    )
 
     return {
       original: originalGalgame,

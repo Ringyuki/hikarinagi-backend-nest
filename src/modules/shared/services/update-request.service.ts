@@ -7,25 +7,103 @@ import {
 import { InjectModel } from '@nestjs/mongoose'
 import { UpdateRequest, UpdateRequestDocument } from '../schemas/update-request.schema'
 import { Model, Types } from 'mongoose'
-import { CreateUpdateRequestDto } from '../dto/create-update-request.dto'
+import { CreateUpdateRequestDto, EntityType } from '../dto/create-update-request.dto'
 import { GetUpdateRequestsDto } from '../dto/get-update-requests.dto'
 import { ProcessUpdateRequestDto } from '../dto/process-update-request.dto'
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface'
 import { UpdateRequestMergeService } from './update-request-merge.service'
 import { RequestWithUser } from '../../../modules/auth/interfaces/request-with-user.interface'
 import { GetUpdateRequestsByEntityParamsDto } from '../dto/get-update-requests-by-entity-params.dto'
+import { User, UserDocument } from '../../user/schemas/user.schema'
+import { SystemMessageService } from '../../message/services/system-message.service'
+import { SystemMessageType } from '../../message/dto/send-system-message.dto'
+import { Person, PersonDocument } from '../../entities/schemas/person.schema'
+import { Producer, ProducerDocument } from '../../entities/schemas/producer.schema'
+import { Character, CharacterDocument } from '../../entities/schemas/character.schema'
+import { Tag, TagDocument } from '../../entities/schemas/tag.schema'
 
 @Injectable()
 export class UpdateRequestService {
   constructor(
     @InjectModel(UpdateRequest.name)
     private updateRequestModel: Model<UpdateRequestDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
+    @InjectModel(Person.name)
+    private personModel: Model<PersonDocument>,
+    @InjectModel(Producer.name)
+    private producerModel: Model<ProducerDocument>,
+    @InjectModel(Character.name)
+    private characterModel: Model<CharacterDocument>,
+    @InjectModel(Tag.name)
+    private tagModel: Model<TagDocument>,
     private updateRequestMergeService: UpdateRequestMergeService,
+    private systemMessageService: SystemMessageService,
   ) {}
 
-  async createUpdateRequest(createUpdateRequestDto: CreateUpdateRequestDto) {
+  private getModel(type: EntityType): Model<any> {
+    switch (type) {
+      case EntityType.Person:
+        return this.personModel
+      case EntityType.Producer:
+        return this.producerModel
+      case EntityType.Character:
+        return this.characterModel
+      case EntityType.Tag:
+        return this.tagModel
+    }
+  }
+
+  async createUpdateRequest(createUpdateRequestDto: CreateUpdateRequestDto, req?: RequestWithUser) {
     const updateRequest = await this.updateRequestModel.create(createUpdateRequestDto)
-    return updateRequest
+
+    const requestUser = await this.userModel.findById(updateRequest.requestedBy)
+    // 向作者和管理员发送系统消息
+    const receivers: Types.ObjectId[] = []
+
+    const Model = this.getModel(updateRequest.entityType)
+    const sharedEntities = ['Person', 'Producer', 'Character']
+    let author: Types.ObjectId
+    if (sharedEntities.includes(createUpdateRequestDto.entityType)) {
+      const entity = await Model.findById(createUpdateRequestDto.entityId)
+      author = new Types.ObjectId(entity.creator.userId as string)
+    } else {
+      const creatorId =
+        (createUpdateRequestDto.changes.updated as any).creator?._id ||
+        (createUpdateRequestDto.changes.updated as any).creator?.userId
+      author = new Types.ObjectId(creatorId as string)
+    }
+    receivers.push(author)
+
+    const adminUsers = await this.userModel.find({
+      hikariUserGroup: { $in: ['admin', 'superAdmin'] },
+    })
+    receivers.push(...adminUsers.map(user => new Types.ObjectId(user._id.toString())))
+
+    let filteredReceivers = receivers
+    if (req.user) {
+      const currentUserId = new Types.ObjectId(req.user._id)
+      filteredReceivers = receivers.filter(receiver => !receiver.equals(currentUserId))
+    }
+
+    for (const receiver of filteredReceivers) {
+      await this.systemMessageService.sendSystemMessage({
+        targetUser: receiver,
+        title: `${createUpdateRequestDto.entityType} 更新请求`,
+        type: SystemMessageType.SYSTEM,
+        content: `${createUpdateRequestDto.entityType} 条目 ${
+          (createUpdateRequestDto.changes.updated as any).transName ||
+          (createUpdateRequestDto.changes.updated as any).name ||
+          (createUpdateRequestDto.changes.updated as any).transTitle ||
+          (createUpdateRequestDto.changes.updated as any).originTitle[0] ||
+          (createUpdateRequestDto.changes.updated as any).name_cn ||
+          (createUpdateRequestDto.changes.updated as any).name
+        } 有更新请求。请前往审核页面查看详情。
+        <br>提交用户：${requestUser.name}
+        <br>提交时间：${new Date().toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })}
+        `,
+      })
+    }
   }
 
   async getUserUpdateRequests(req: RequestWithUser, options: GetUpdateRequestsDto) {
@@ -77,8 +155,17 @@ export class UpdateRequestService {
       throw new BadRequestException('Update request is not pending')
     }
 
-    const isCreator =
-      (updateRequest.changes.previous as any).creator.userId.toString() === req.user._id
+    const Model = this.getModel(updateRequest.entityType)
+    let isCreator: boolean
+    const sharedEntities = ['Person', 'Producer', 'Character']
+    if (sharedEntities.includes(updateRequest.entityType)) {
+      const entity = await Model.findById(updateRequest.entityId)
+      const creatorUserId = entity.creator.userId.toString()
+      isCreator = creatorUserId === req.user._id.toString()
+    } else {
+      const creatorUserId = (updateRequest.changes.updated as any).creator?.userId?.toString()
+      isCreator = creatorUserId === req.user._id.toString()
+    }
 
     if (
       req.user.hikariUserGroup !== 'admin' &&

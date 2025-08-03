@@ -614,7 +614,7 @@ export class UpdateRequestMergeService {
       await this.editHistoryService.recordEditHistory({
         type: params.itemType.toLowerCase() as 'person' | 'producer' | 'character',
         actionType: 'update',
-        entityId: entity.id,
+        entityId: new Types.ObjectId(entity._id as string),
         userId: params.requestedBy,
         userName: requestedUser.name,
         changes: `更新了${params.itemType.toLowerCase()}条目`,

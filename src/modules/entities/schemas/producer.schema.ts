@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { Document, Types } from 'mongoose'
+import { ProducerToObjectOptions } from '../../../types/mongoose-extensions'
 
 export type ProducerDocument = Producer & Document
 
@@ -19,7 +20,7 @@ export class Work {
   work: Types.ObjectId
 }
 
-@Schema()
+@Schema({ _id: false })
 export class Label {
   @Prop({ type: String, required: true })
   key: string
@@ -41,7 +42,27 @@ export class Creator {
   name: string
 }
 
-@Schema({ timestamps: true })
+@Schema({
+  timestamps: true,
+  toJSON: {
+    transform: (_, ret, options: ProducerToObjectOptions) => {
+      if (options._transformToUpdateRequestFormat) {
+        const _ret = {
+          name: ret.name,
+          country: ret.country,
+          type: ret.type,
+          aliases: ret.aliases,
+          intro: ret.intro,
+          transIntro: ret.transIntro,
+          logo: ret.logo,
+          labels: ret.labels.map(label => ({ key: label.key, value: label.value })),
+          status: ret.status,
+        }
+        return _ret
+      }
+    },
+  },
+})
 export class Producer {
   @Prop({
     type: Number,

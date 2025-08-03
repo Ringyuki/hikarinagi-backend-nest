@@ -60,18 +60,21 @@ export class LightNovelManagementService {
     delete updatedLightNovel.createdAt
     const originalLightNovel = lightNovel.toJSON({ transformToUpdateRequestFormat: true })
 
-    await this.updateRequestService.createUpdateRequest({
-      entityType: EntityType.LightNovel,
-      entityId: lightNovel._id as Types.ObjectId,
-      title: 'LightNovel 更新请求',
-      description: '更新 LightNovel 条目',
-      requestedBy: new Types.ObjectId(req.user._id),
-      changes: {
-        previous: originalLightNovel,
-        updated: updatedLightNovel,
-        changedFields: Object.keys(updatedLightNovel),
+    await this.updateRequestService.createUpdateRequest(
+      {
+        entityType: EntityType.LightNovel,
+        entityId: lightNovel._id as Types.ObjectId,
+        title: 'LightNovel 更新请求',
+        description: '更新 LightNovel 条目',
+        requestedBy: new Types.ObjectId(req.user._id),
+        changes: {
+          previous: originalLightNovel,
+          updated: updatedLightNovel,
+          changedFields: Object.keys(updatedLightNovel),
+        },
       },
-    })
+      req,
+    )
 
     return {
       original: originalLightNovel,
