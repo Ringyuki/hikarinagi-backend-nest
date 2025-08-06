@@ -253,6 +253,18 @@ export class LightNovel {
     default: 0,
   })
   views: number
+
+  @Prop({
+    type: Number,
+    default: 0,
+  })
+  readTimes: number
+
+  @Prop({
+    type: Number,
+    default: 0,
+  })
+  downloadTimes: number
 }
 
 export const LightNovelSchema = SchemaFactory.createForClass(LightNovel)

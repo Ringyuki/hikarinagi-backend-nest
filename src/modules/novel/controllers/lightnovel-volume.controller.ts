@@ -47,6 +47,7 @@ export class LightNovelVolumeController {
     @Param('volumeId') volumeId: number,
     @Query('signature') signature: string,
     @Query('timestamp') timestamp: number,
+    @Query('readOnline') readOnline: boolean,
     @Req() req: RequestWithUser,
   ) {
     const { url } = await this.lightNovelVolumeService.generateDownloadUrl(
@@ -55,6 +56,7 @@ export class LightNovelVolumeController {
       signature,
       timestamp,
       req,
+      readOnline,
     )
     return {
       data: {

@@ -178,6 +178,7 @@ export class LightNovelVolumeService {
     signature: string,
     timestamp: number,
     req: RequestWithUser,
+    readOnline?: boolean,
   ) {
     if (!signature || !timestamp) {
       throw new BadRequestException('signature and timestamp are required')
@@ -220,6 +221,30 @@ export class LightNovelVolumeService {
     })
 
     const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: 300 }) // 链接5分钟有效
+
+    if (readOnline) {
+      await this.lightNovelVolumeModel.findOneAndUpdate(
+        { volumeId },
+        { $inc: { readTimes: 1 } },
+        { timestamps: false },
+      )
+      await this.lightNovelModel.findOneAndUpdate(
+        { novelId },
+        { $inc: { readTimes: 1 } },
+        { timestamps: false },
+      )
+    } else {
+      await this.lightNovelVolumeModel.findOneAndUpdate(
+        { volumeId },
+        { $inc: { downloadTimes: 1 } },
+        { timestamps: false },
+      )
+      await this.lightNovelModel.findOneAndUpdate(
+        { novelId },
+        { $inc: { downloadTimes: 1 } },
+        { timestamps: false },
+      )
+    }
 
     return { url: signedUrl }
   }
