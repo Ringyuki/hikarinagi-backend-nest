@@ -28,6 +28,11 @@ import { Character, CharacterDocument } from '../../entities/schemas/character.s
 import { CounterService } from '../../shared/services/counter.service'
 import { Types } from 'mongoose'
 import { GetGalgameMonthlyReleasesDto } from '../dto/get-galgame-monthly-releases.dto'
+import { SystemMessageService } from '../../message/services/system-message.service'
+import { EmailService } from '../../email/services/email.service'
+import { User, UserDocument } from '../../user/schemas/user.schema'
+import { SystemMessageType } from '../../message/dto/send-system-message.dto'
+import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
 
 @Injectable()
 export class GalgameService {
@@ -39,24 +44,36 @@ export class GalgameService {
     @InjectModel(Producer.name) private producerModel: Model<ProducerDocument>,
     @InjectModel(Person.name) private personModel: Model<PersonDocument>,
     @InjectModel(Character.name) private characterModel: Model<CharacterDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectConnection() private readonly connection: Connection,
     private readonly hikariConfigService: HikariConfigService,
     private readonly editHistoryService: EditHistoryService,
     private readonly bangumiAuthService: BangumiAuthService,
     private readonly httpService: HttpService,
     private readonly counterService: CounterService,
+    private readonly systemMessageService: SystemMessageService,
+    private readonly emailService: EmailService,
   ) {}
 
-  async findById(id: string) {
+  async findById(id: string, preview: boolean = false, req: RequestWithUser) {
     if (isNaN(Number(id))) {
       throw new BadRequestException('id must be a number')
     }
+
+    const query: any = {
+      galId: id,
+      status: 'published',
+    }
+    if (
+      [HikariUserGroup.ADMIN, HikariUserGroup.SUPER_ADMIN].includes(req.user?.hikariUserGroup) &&
+      preview
+    ) {
+      delete query.status
+    }
+
     const galgame = await this.galgameModel
       .findOneAndUpdate(
-        {
-          galId: id,
-          status: 'published',
-        },
+        query,
         { $inc: { views: 1 } },
         {
           timestamps: false,
@@ -1376,6 +1393,23 @@ export class GalgameService {
       }
 
       const [newGalgame] = await this.galgameModel.create([gameData], { session })
+
+      if (newGalgame.status === 'pending') {
+        const adminUsers = await this.userModel.find({
+          hikariUserGroup: { $in: ['admin', 'superAdmin'] },
+        })
+        const adminUserIds = adminUsers.map(user => user._id)
+        for (const adminUserId of adminUserIds) {
+          await this.systemMessageService.sendSystemMessage({
+            targetUser: new Types.ObjectId(adminUserId.toString()),
+            title: '新游戏条目等待审核',
+            content: `新游戏条目 ${newGalgame.transTitle || newGalgame.originTitle[0]} 等待审核`,
+            type: SystemMessageType.SYSTEM,
+            link: `/galgame/${newGalgame.galId}?preview=true`,
+            linkText: '预览游戏条目',
+          })
+        }
+      }
 
       // 7. 更新关联
       // 更新制作商关联

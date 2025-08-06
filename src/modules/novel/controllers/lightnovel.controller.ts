@@ -35,8 +35,12 @@ export class LightNovelController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string) {
-    const novel = await this.lightNovelService.findById(id)
+  async findById(
+    @Param('id') id: string,
+    @Req() req: RequestWithUser,
+    @Query('preview') preview: boolean = false,
+  ) {
+    const novel = await this.lightNovelService.findById(id, req, preview)
     return {
       data: novel,
     }

@@ -20,6 +20,9 @@ import { Connection } from 'mongoose'
 import { CounterService } from '../../../modules/shared/services/counter.service'
 import { HikariUserGroup } from '../../../modules/auth/enums/hikari-user-group.enum'
 import { HikariConfigService } from '../../../common/config/services/config.service'
+import { User, UserDocument } from '../../user/schemas/user.schema'
+import { SystemMessageType } from '../../message/dto/send-system-message.dto'
+import { SystemMessageService } from '../../message/services/system-message.service'
 
 @Injectable()
 export class LightNovelVolumeService {
@@ -29,6 +32,8 @@ export class LightNovelVolumeService {
     private lightNovelVolumeModel: Model<LightNovelVolumeDocument>,
     @InjectModel(LightNovel.name)
     private lightNovelModel: Model<LightNovelDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly systemMessageService: SystemMessageService,
     private readonly editHistoryService: EditHistoryService,
     @InjectConnection() private readonly connection: Connection,
     private readonly counterService: CounterService,
@@ -44,26 +49,43 @@ export class LightNovelVolumeService {
     })
   }
 
-  async findById(id: string) {
+  async findById(id: string, req: RequestWithUser, preview: boolean = false) {
     if (isNaN(Number(id))) {
       throw new BadRequestException('id must be a number')
     }
 
+    const query: any = {
+      volumeId: id,
+      status: 'published',
+    }
+    if (
+      [HikariUserGroup.ADMIN, HikariUserGroup.SUPER_ADMIN].includes(req.user?.hikariUserGroup) &&
+      preview
+    ) {
+      delete query.status
+    }
+
     const volume = await this.lightNovelVolumeModel
-      .findOneAndUpdate({ volumeId: id }, { $inc: { views: 1 } }, { timestamps: false })
-      .where('status')
-      .equals('published')
+      .findOneAndUpdate(query, { $inc: { views: 1 } }, { timestamps: false })
       .populate('seriesId', 'name name_cn novelId')
 
     if (!volume) {
       throw new NotFoundException('Volume not found')
     }
 
+    const seriesQuery: any = {
+      seriesId: volume.seriesId._id,
+      status: 'published',
+    }
+    if (
+      [HikariUserGroup.ADMIN, HikariUserGroup.SUPER_ADMIN].includes(req.user?.hikariUserGroup) &&
+      preview
+    ) {
+      delete seriesQuery.status
+    }
+
     const seriesVolumes = await this.lightNovelVolumeModel
-      .find({
-        seriesId: volume.seriesId._id,
-        status: 'published',
-      })
+      .find(seriesQuery)
       .select('volumeId volumeNumber volumeType publicationDate')
       .sort({ publicationDate: 1 }) // 按出版日期升序排列
       .lean()
@@ -128,6 +150,23 @@ export class LightNovelVolumeService {
         },
         { new: true, session },
       )
+
+      if (volume[0].status === 'pending') {
+        const adminUsers = await this.userModel.find({
+          hikariUserGroup: { $in: [HikariUserGroup.ADMIN, HikariUserGroup.SUPER_ADMIN] },
+        })
+        const adminUserIds = adminUsers.map(user => user._id)
+        for (const adminUserId of adminUserIds) {
+          await this.systemMessageService.sendSystemMessage({
+            targetUser: new Types.ObjectId(adminUserId.toString()),
+            title: '新轻小说分卷等待审核',
+            content: `新轻小说分卷 ${volume[0].name_cn || volume[0].name} 等待审核`,
+            type: SystemMessageType.SYSTEM,
+            link: `/lightnovel/volumes/${volume[0].volumeId}?preview=true`,
+            linkText: '预览轻小说分卷',
+          })
+        }
+      }
 
       await this.editHistoryService.recordEditHistory({
         type: 'LightNovelVolume',

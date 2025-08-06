@@ -60,8 +60,12 @@ export class GalgameController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<{ data: any }> {
-    const galgame = await this.galgameService.findById(id)
+  async findById(
+    @Param('id') id: string,
+    @Query('preview') preview: boolean = false,
+    @Req() req: RequestWithUser,
+  ): Promise<{ data: any }> {
+    const galgame = await this.galgameService.findById(id, preview, req)
     return {
       data: galgame,
     }

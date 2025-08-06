@@ -21,6 +21,7 @@ import { Tag, TagSchema } from '../entities/schemas/tag.schema'
 import { Producer, ProducerSchema } from '../entities/schemas/producer.schema'
 import { Person, PersonSchema } from '../entities/schemas/person.schema'
 import { Character, CharacterSchema } from '../entities/schemas/character.schema'
+import { User, UserSchema } from '../user/schemas/user.schema'
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { Character, CharacterSchema } from '../entities/schemas/character.schema
     MongooseModule.forFeature([{ name: Producer.name, schema: ProducerSchema }]),
     MongooseModule.forFeature([{ name: Person.name, schema: PersonSchema }]),
     MongooseModule.forFeature([{ name: Character.name, schema: CharacterSchema }]),
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
   providers: [LightNovelService, LightNovelVolumeService, EditHistoryService],
   controllers: [LightNovelController, LightNovelVolumeController],

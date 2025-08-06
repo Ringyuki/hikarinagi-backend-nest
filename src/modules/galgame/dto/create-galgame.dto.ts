@@ -83,9 +83,10 @@ export class TagDto {
   @IsString()
   name: string
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  aliases: string[]
+  aliases?: string[]
 
   @IsOptional()
   @IsString()

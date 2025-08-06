@@ -13,8 +13,12 @@ export class LightNovelVolumeController {
   constructor(private readonly lightNovelVolumeService: LightNovelVolumeService) {}
 
   @Get(':id')
-  async findById(@Param('id') id: string) {
-    const volume = await this.lightNovelVolumeService.findById(id)
+  async findById(
+    @Param('id') id: string,
+    @Req() req: RequestWithUser,
+    @Query('preview') preview: boolean = false,
+  ) {
+    const volume = await this.lightNovelVolumeService.findById(id, req, preview)
     return {
       data: volume,
     }
@@ -65,7 +69,7 @@ export class LightNovelVolumeController {
     }
   }
 
-  @Post()
+  @Post('create')
   @Roles(HikariUserGroup.CREATOR)
   @UseGuards(JwtAuthGuard, RolesGuard)
   async createLightNovelVolume(

@@ -15,6 +15,10 @@ import { Tag, TagDocument } from '../../entities/schemas/tag.schema'
 import { Producer, ProducerDocument } from '../../entities/schemas/producer.schema'
 import { Person, PersonDocument } from '../../entities/schemas/person.schema'
 import { Character, CharacterDocument } from '../../entities/schemas/character.schema'
+import { SystemMessageType } from '../../message/dto/send-system-message.dto'
+import { SystemMessageService } from '../../message/services/system-message.service'
+import { User, UserDocument } from '../../user/schemas/user.schema'
+import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
 
 @Injectable()
 export class LightNovelService {
@@ -27,23 +31,38 @@ export class LightNovelService {
     @InjectModel(Producer.name) private producerModel: Model<ProducerDocument>,
     @InjectModel(Person.name) private personModel: Model<PersonDocument>,
     @InjectModel(Character.name) private characterModel: Model<CharacterDocument>,
+    private readonly systemMessageService: SystemMessageService,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
 
-  async findById(id: string) {
+  async findById(id: string, req: RequestWithUser, preview: boolean = false) {
     if (isNaN(Number(id))) {
       throw new BadRequestException('id must be a number')
     }
 
+    const query: any = {
+      novelId: id,
+      status: 'published',
+    }
+    const volumeMatch: any = {
+      status: 'published',
+    }
+    if (
+      [HikariUserGroup.ADMIN, HikariUserGroup.SUPER_ADMIN].includes(req.user?.hikariUserGroup) &&
+      preview
+    ) {
+      delete query.status
+      delete volumeMatch.status
+    }
+
     const novel = await this.lightNovelModel
       .findOneAndUpdate(
-        { novelId: id },
+        query,
         { $inc: { views: 1 } },
         {
           timestamps: false,
         },
       )
-      .where('status')
-      .equals('published')
       .select('-__v')
       .populate('creator.userId', 'name avatar userId -_id')
       .populate('author', 'name id transName -_id')
@@ -55,7 +74,7 @@ export class LightNovelService {
       .populate({
         path: 'series.volumes',
         model: 'LightNovelVolume',
-        match: { status: 'published' },
+        match: volumeMatch,
         select:
           'volumeId name volumeNumber volumeExtraName volumeType publicationDate status -_id cover',
         options: { sort: { publicationDate: 1 } }, // 按出版日期升序排列
@@ -732,6 +751,23 @@ export class LightNovelService {
       }
 
       const [newLightNovel] = await this.lightNovelModel.create([lightNovelData], { session })
+
+      if (newLightNovel.status === 'pending') {
+        const adminUsers = await this.userModel.find({
+          hikariUserGroup: { $in: ['admin', 'superAdmin'] },
+        })
+        const adminUserIds = adminUsers.map(user => user._id)
+        for (const adminUserId of adminUserIds) {
+          await this.systemMessageService.sendSystemMessage({
+            targetUser: new Types.ObjectId(adminUserId.toString()),
+            title: '新轻小说条目等待审核',
+            content: `新轻小说条目 ${newLightNovel.name_cn || newLightNovel.name} 等待审核`,
+            type: SystemMessageType.SYSTEM,
+            link: `/lightnovel/${newLightNovel.novelId}?preview=true`,
+            linkText: '预览轻小说条目',
+          })
+        }
+      }
 
       // 9. 更新关联信息
       // 更新作者关联
