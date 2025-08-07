@@ -169,8 +169,8 @@ export class UpdateRequestMergeService {
 
     if (params.mergeData.downloadInfo) {
       const newDownloadInfo = { ...params.mergeData.downloadInfo }
-      delete newDownloadInfo.viewTimes
-      delete newDownloadInfo.downloadTimes
+      newDownloadInfo.viewTimes = originalGalgame.downloadInfo.viewTimes || 0
+      newDownloadInfo.downloadTimes = originalGalgame.downloadInfo.downloadTimes || 0
       updateData.downloadInfo = newDownloadInfo
     }
 
