@@ -164,8 +164,14 @@ export class UpdateRequestMergeService {
       transIntro: params.mergeData.transIntro,
       images: params.mergeData.images,
       nsfw: params.mergeData.nsfw,
-      downloadInfo: params.mergeData.downloadInfo,
       status: params.mergeData.status,
+    }
+
+    if (params.mergeData.downloadInfo) {
+      const newDownloadInfo = { ...params.mergeData.downloadInfo }
+      delete newDownloadInfo.viewTimes
+      delete newDownloadInfo.downloadTimes
+      updateData.downloadInfo = newDownloadInfo
     }
 
     if (params.mergeData.producers && Array.isArray(params.mergeData.producers)) {
