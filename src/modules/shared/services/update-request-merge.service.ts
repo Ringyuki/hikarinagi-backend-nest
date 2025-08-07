@@ -176,27 +176,27 @@ export class UpdateRequestMergeService {
 
     if (params.mergeData.producers && Array.isArray(params.mergeData.producers)) {
       updateData.producers = params.mergeData.producers.map(producer => ({
-        producer: producer._id,
+        producer: new Types.ObjectId(producer._id as string),
         note: producer.note || '',
       }))
     }
 
     if (params.mergeData.tags && Array.isArray(params.mergeData.tags)) {
       updateData.tags = params.mergeData.tags.map(tag => ({
-        tag: tag._id,
+        tag: new Types.ObjectId(tag._id as string),
       }))
     }
 
     if (params.mergeData.staffs && Array.isArray(params.mergeData.staffs)) {
       updateData.staffs = params.mergeData.staffs.map(staff => ({
-        person: staff._id,
+        person: new Types.ObjectId(staff._id as string),
         role: staff.role,
       }))
     }
 
     if (params.mergeData.characters && Array.isArray(params.mergeData.characters)) {
       updateData.characters = params.mergeData.characters.map(character => ({
-        character: character._id,
+        character: new Types.ObjectId(character._id as string),
         role: character.role,
       }))
     }
@@ -328,37 +328,37 @@ export class UpdateRequestMergeService {
       status: params.mergeData.status,
     }
     if (params.mergeData.author) {
-      updateData.author = params.mergeData.author._id
+      updateData.author = new Types.ObjectId(params.mergeData.author._id as string)
     }
     if (params.mergeData.publishers) {
       updateData.publishers = params.mergeData.publishers.map(publisher => ({
-        publisher: publisher._id,
+        publisher: new Types.ObjectId(publisher._id as string),
         note: publisher.note,
       }))
     }
     if (params.mergeData.bunko) {
-      updateData.bunko = params.mergeData.bunko._id
+      updateData.bunko = new Types.ObjectId(params.mergeData.bunko._id as string)
     }
     if (params.mergeData.characters) {
       updateData.characters = params.mergeData.characters.map(character => ({
-        character: character._id,
+        character: new Types.ObjectId(character._id as string),
         role: character.role,
       }))
     }
     if (params.mergeData.illustrators) {
       updateData.illustrators = params.mergeData.illustrators.map(illustrator => ({
-        illustrator: illustrator._id,
+        illustrator: new Types.ObjectId(illustrator._id as string),
         note: illustrator.note,
       }))
     }
     if (params.mergeData.tags && Array.isArray(params.mergeData.tags)) {
       updateData.tags = params.mergeData.tags.map(tag => ({
-        tag: tag._id,
+        tag: new Types.ObjectId(tag._id as string),
       }))
     }
     if (params.mergeData.series) {
       const volumes = params.mergeData.series.volumes.map(volume =>
-        volume._id ? volume._id : volume,
+        volume._id ? new Types.ObjectId(volume._id as string) : volume,
       )
       updateData.series = {
         totalVolumes: params.mergeData.series.totalVolumes || null,
