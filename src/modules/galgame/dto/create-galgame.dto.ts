@@ -34,19 +34,22 @@ export class ProducerDto {
   @IsString({ each: true })
   aliases?: string[]
 
+  @IsOptional()
   @IsString()
-  intro: string
+  intro?: string
 
   @IsOptional()
   @IsString()
   transIntro?: string
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  type: string[]
+  type?: string[]
 
+  @IsOptional()
   @IsString()
-  country: string
+  country?: string
 
   @IsOptional()
   @IsString()
@@ -57,9 +60,10 @@ export class ProducerDto {
   logo?: string
 
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => ProducerLabelDto)
-  labels: ProducerLabelDto[]
+  labels?: ProducerLabelDto[]
 }
 
 export class CreateGalgameProducerDto {
@@ -146,9 +150,10 @@ export class PersonDto {
   image?: string
 
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => PersonLabelDto)
-  labels: PersonLabelDto[]
+  labels?: PersonLabelDto[]
 
   @IsOptional()
   @IsArray()
@@ -205,9 +210,10 @@ export class ActorDto {
   image?: string
 
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => PersonLabelDto)
-  labels: PersonLabelDto[]
+  labels?: PersonLabelDto[]
 }
 
 export class CharacterLabelDto {
@@ -252,9 +258,10 @@ export class CharacterDto {
   image?: string
 
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => CharacterLabelDto)
-  labels: CharacterLabelDto[]
+  labels?: CharacterLabelDto[]
 
   @IsOptional()
   @IsArray()

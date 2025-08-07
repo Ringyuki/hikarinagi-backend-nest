@@ -32,23 +32,27 @@ export class ProducerDto {
   @IsString()
   name: string
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  aliases: string[]
+  aliases?: string[]
 
+  @IsOptional()
   @IsString()
-  intro: string
+  intro?: string
 
   @IsOptional()
   @IsString()
   transIntro?: string
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  type: string[]
+  type?: string[]
 
+  @IsOptional()
   @IsString()
-  country: string
+  country?: string
 
   @IsOptional()
   @IsString()
@@ -58,10 +62,11 @@ export class ProducerDto {
   @IsString()
   logo?: string
 
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ProducerLabelDto)
-  labels: ProducerLabelDto[]
+  labels?: ProducerLabelDto[]
 }
 
 export class CreateLightNovelPublisherDto {
@@ -86,9 +91,10 @@ export class TagDto {
   @IsString()
   name: string
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  aliases: string[]
+  aliases?: string[]
 
   @IsOptional()
   @IsString()
@@ -129,9 +135,10 @@ export class PersonDto {
   @IsString()
   transName?: string
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  aliases: string[]
+  aliases?: string[]
 
   @IsOptional()
   @IsString()
@@ -145,10 +152,11 @@ export class PersonDto {
   @IsString()
   image?: string
 
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PersonLabelDto)
-  labels: PersonLabelDto[]
+  labels?: PersonLabelDto[]
 
   @IsOptional()
   @IsArray()
@@ -204,9 +212,10 @@ export class CharacterDto {
   @IsString()
   transName?: string
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  aliases: string[]
+  aliases?: string[]
 
   @IsOptional()
   @IsString()
@@ -220,10 +229,11 @@ export class CharacterDto {
   @IsString()
   image?: string
 
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CharacterLabelDto)
-  labels: CharacterLabelDto[]
+  labels?: CharacterLabelDto[]
 
   @IsOptional()
   @IsString()
