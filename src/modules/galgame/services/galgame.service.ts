@@ -1096,7 +1096,7 @@ export class GalgameService {
         for (const tagData of galgame.tags) {
           if (tagData.tag._id) {
             tagIds.push({
-              tag: tagData.tag._id,
+              tag: new Types.ObjectId(tagData.tag._id),
               likes: tagData.likes || 0,
             })
             continue
@@ -1147,7 +1147,7 @@ export class GalgameService {
           }
           if (producerData.producer._id) {
             producerIds.push({
-              producer: producerData.producer._id,
+              producer: new Types.ObjectId(producerData.producer._id),
               note: producerData.note || '',
             })
             continue
@@ -1203,7 +1203,7 @@ export class GalgameService {
         for (const staffData of galgame.staffs) {
           if (staffData.person._id) {
             staffIds.push({
-              person: staffData.person._id,
+              person: new Types.ObjectId(staffData.person._id),
               role: staffData.role || '',
             })
             continue
@@ -1271,7 +1271,7 @@ export class GalgameService {
         for (const characterData of galgame.characters) {
           if (characterData.character._id) {
             characterLinks.push({
-              character: characterData.character._id,
+              character: new Types.ObjectId(characterData.character._id),
               role: characterData.role || '主角',
             })
             continue

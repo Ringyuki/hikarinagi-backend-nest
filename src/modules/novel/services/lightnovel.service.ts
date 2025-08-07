@@ -438,7 +438,7 @@ export class LightNovelService {
           authorId = newAuthor._id
         }
       } else {
-        authorId = author._id
+        authorId = new Types.ObjectId(author._id)
       }
 
       // 3. 创建/获取插画师
@@ -685,7 +685,7 @@ export class LightNovelService {
         for (const tagData of tags) {
           if (tagData.tag._id) {
             tagIds.push({
-              tag: tagData.tag._id,
+              tag: new Types.ObjectId(tagData.tag._id),
               likes: tagData.likes || 0,
             })
             continue
