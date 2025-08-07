@@ -29,9 +29,10 @@ export class ProducerDto {
   @IsString()
   name: string
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  aliases: string[]
+  aliases?: string[]
 
   @IsString()
   intro: string
@@ -127,9 +128,10 @@ export class PersonDto {
   @IsString()
   transName?: string
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  aliases: string[]
+  aliases?: string[]
 
   @IsOptional()
   @IsString()
@@ -185,9 +187,10 @@ export class ActorDto {
   @IsString()
   transName?: string
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  aliases: string[]
+  aliases?: string[]
 
   @IsOptional()
   @IsString()
@@ -231,9 +234,10 @@ export class CharacterDto {
   @IsString()
   transName?: string
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  aliases: string[]
+  aliases?: string[]
 
   @IsOptional()
   @IsString()
