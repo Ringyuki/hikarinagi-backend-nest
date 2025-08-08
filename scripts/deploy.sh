@@ -2,26 +2,21 @@
 
 set -euo pipefail
 
-# 颜色输出
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# 日志函数
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
-
 log_warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
-
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 环境检查
 check_environment() {
     log_info "检查环境..."
     
@@ -46,14 +41,12 @@ check_environment() {
     log_info "环境检查通过"
 }
 
-# 备份当前版本
 backup_current_version() {
     log_info "备份当前版本..."
     
     local backup_dir="backups/$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$backup_dir"
     
-    # 备份 dist 目录
     if [[ -d "dist" ]]; then
         cp -r dist "$backup_dir/"
         log_info "已备份到: $backup_dir"
@@ -62,7 +55,6 @@ backup_current_version() {
     fi
 }
 
-# 健康检查
 health_check() {
     local url="${1:-http://localhost:${PORT:-3005}}"
     local max_attempts=30
@@ -86,24 +78,20 @@ health_check() {
     done
 }
 
-# 回滚
 rollback() {
     log_error "部署失败，开始回滚..."
     
-    # 找到最新的备份
     local latest_backup=$(find backups -type d -name "*_*" | sort | tail -1)
     
     if [[ -n "$latest_backup" && -d "$latest_backup" ]]; then
         log_info "回滚到: $latest_backup"
         
-        # 停止当前应用
         pm2 stop hikarinagi-backend-nestjs || true
         
         # 恢复备份
         rm -rf dist
         cp -r "$latest_backup/dist" .
         
-        # 重启应用
         pm2 restart hikarinagi-backend-nestjs
         
         log_info "回滚完成"
@@ -113,35 +101,28 @@ rollback() {
     fi
 }
 
-# 主要部署流程
 deploy() {
     local env="${1:-production}"
     
     log_info "开始部署到 $env 环境..."
     
-    # 环境检查
     check_environment || { log_error "环境检查失败"; return 1; }
     
     # 备份当前版本
     backup_current_version
     
-    # 设置错误处理
     trap 'log_error "部署过程中发生错误"; rollback; exit 1' ERR
     
-    # 拉取代码
     log_info "拉取最新代码..."
     git fetch --all
     git reset --hard origin/main
     
-    # 安装依赖
     log_info "安装依赖..."
     pnpm install --frozen-lockfile --prefer-offline
     
-    # 构建应用
     log_info "构建应用..."
     pnpm run build
     
-    # 重启应用
     log_info "重启应用..."
     if pm2 list | grep -q "hikarinagi-backend-nestjs"; then
         pm2 restart hikarinagi-backend-nestjs
@@ -151,13 +132,12 @@ deploy() {
     
     pm2 save
     
-    # 健康检查
     health_check || { log_error "健康检查失败"; rollback; return 1; }
     
     # 清理旧备份（保留最近5个）
     find backups -type d -name "*_*" | sort | head -n -5 | xargs rm -rf
     
-    log_info "部署完成！"
+    log_info "部署完成"
 }
 
 # 主程序
@@ -176,10 +156,8 @@ main() {
     esac
 }
 
-# 设置必要的环境变量
 export NODE_ENV="${NODE_ENV:-production}"
 export APP_PATH="${APP_PATH:-/app}"
 export PORT="${PORT:-3005}"
 
-# 执行主程序
 main "$@" 
