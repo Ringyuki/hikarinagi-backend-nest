@@ -61,6 +61,27 @@ class StaffDto {
   image?: string
 }
 
+class WorkActDto {
+  @IsString()
+  @IsNotEmpty()
+  @IsMongoId()
+  workId: string
+
+  @IsString()
+  @IsNotEmpty()
+  workType: string
+}
+
+class ActDto {
+  @IsOptional()
+  person?: any
+
+  @ValidateNested()
+  @Type(() => WorkActDto)
+  @IsOptional()
+  work?: WorkActDto
+}
+
 class CharacterDto {
   @IsString()
   @IsMongoId()
@@ -78,6 +99,12 @@ class CharacterDto {
   @IsString()
   @IsOptional()
   image?: string
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ActDto)
+  @IsOptional()
+  act?: ActDto[]
 }
 
 class TagDto {

@@ -159,10 +159,6 @@ export class PersonDto {
   labels?: PersonLabelDto[]
 
   @IsOptional()
-  @IsArray()
-  works?: any[]
-
-  @IsOptional()
   @IsString()
   status?: string
 
@@ -241,10 +237,6 @@ export class CharacterDto {
 
   @IsOptional()
   creator?: any
-
-  @IsOptional()
-  @IsArray()
-  works?: any[]
 
   @IsOptional()
   @IsString()

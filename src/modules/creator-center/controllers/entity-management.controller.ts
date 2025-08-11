@@ -22,6 +22,18 @@ export class EntityManagementController {
     }
   }
 
+  @Get(':type/:id')
+  async getEntity(
+    @Param('type') type: 'person' | 'producer' | 'character' | 'tag',
+    @Param('id') id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    const result = await this.entityManagementService.getEntity(type, id, req)
+    return {
+      data: result,
+    }
+  }
+
   @Put(':type/:id')
   async updateEntity(
     @Param('type') type: EntityType,

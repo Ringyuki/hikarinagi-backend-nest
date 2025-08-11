@@ -31,7 +31,8 @@
     "pm2:status": "pm2 show hikarinagi-backend-nestjs",
     "pm2:monitor": "pm2 monit",
     "deploy": "chmod +x scripts/deploy.sh && ./scripts/deploy.sh production",
-    "deploy:staging": "chmod +x scripts/deploy.sh && ./scripts/deploy.sh staging"
+    "deploy:staging": "chmod +x scripts/deploy.sh && ./scripts/deploy.sh staging",
+    "migration:run": "ts-node -r tsconfig-paths/register scripts/migrate-characters.ts"
   },
   "lint-staged": {
     "*.{js,ts}": [

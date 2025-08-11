@@ -199,6 +199,49 @@ export class UpdateRequestMergeService {
         character: new Types.ObjectId(character._id as string),
         role: character.role,
       }))
+
+      // 批量更新角色的 act 字段
+      const characterUpdates = params.mergeData.characters.map(async charDto => {
+        const characterDoc = await this.characterModel.findById(charDto._id).exec()
+        if (characterDoc) {
+          // 保留其他作品的 act 条目
+          const otherWorkActs =
+            characterDoc.act?.filter(
+              act => act.work.workId.toString() !== params.itemId.toString(),
+            ) || []
+
+          // 处理当前作品的声优条目
+          let currentWorkActs = []
+          if (charDto.act && charDto.act.length > 0) {
+            const newActs = charDto.act
+              .filter(act => act.person) // 只保留有声优的条目
+              .map(act => ({
+                person: new Types.ObjectId(act.person),
+                work: {
+                  workId: new Types.ObjectId(params.itemId),
+                  workType: 'Galgame',
+                },
+              }))
+
+            currentWorkActs = newActs.filter(
+              (newAct, index, self) =>
+                index ===
+                self.findIndex(
+                  act =>
+                    act.person.toString() === newAct.person.toString() &&
+                    act.work.workId.toString() === newAct.work.workId.toString(),
+                ),
+            )
+          }
+
+          // 更新角色的act数组
+          characterDoc.act = [...otherWorkActs, ...currentWorkActs]
+          return characterDoc.save()
+        }
+      })
+
+      // 等待所有角色更新完成
+      await Promise.all(characterUpdates.filter(Boolean))
     }
 
     // 可选字段处理
@@ -554,13 +597,6 @@ export class UpdateRequestMergeService {
 
     const updateData = { ...params.mergeData }
 
-    if (params.mergeData.works && Array.isArray(params.mergeData.works)) {
-      updateData.works = params.mergeData.works.map(work => ({
-        workType: work.workType,
-        work: work.work, // _id
-      }))
-    }
-
     if (params.itemType.toLowerCase() === 'character') {
       // 处理角色关系
       if (params.mergeData.relations && Array.isArray(params.mergeData.relations)) {
@@ -569,20 +605,12 @@ export class UpdateRequestMergeService {
           relation: relation.relation,
         }))
       }
-      // 处理声优
-      if (params.mergeData.actors && Array.isArray(params.mergeData.actors)) {
-        updateData.actors = params.mergeData.actors // _id 数组
-      }
     }
 
     // 更新实体
     await Model.findByIdAndUpdate(params.itemId, { $set: updateData }, { new: true })
 
     await entity.populate([
-      {
-        path: 'works.work',
-        select: 'name transTitle name_cn originTitle novelId galId cover status',
-      },
       {
         path: 'creator.userId',
         select: 'name avatar userId -_id',
@@ -591,10 +619,6 @@ export class UpdateRequestMergeService {
     if (params.itemType.toLowerCase() === 'character') {
       await entity.populate([
         {
-          path: 'actors',
-          select: 'name transName image',
-        },
-        {
           path: 'relations.character',
           select: 'name transName image',
         },
@@ -602,19 +626,6 @@ export class UpdateRequestMergeService {
     }
 
     const result = entity.toObject()
-    if (result.works && result.works.length > 0) {
-      result.works = result.works
-        .filter(work => work.work && work.work.status === 'published')
-        .map(workItem => {
-          const { workType, work: work_ } = workItem
-          return {
-            workType,
-            work: work_._id,
-            name: work_.name || work_.transTitle || work_.name_cn || (work_.originTitle?.[0] ?? ''),
-            cover: work_.cover,
-          }
-        })
-    }
 
     if (params.itemType.toLowerCase() !== 'tag') {
       await this.editHistoryService.recordEditHistory({

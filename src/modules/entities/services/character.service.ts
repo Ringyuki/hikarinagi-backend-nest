@@ -26,26 +26,26 @@ export class CharacterService {
       // 匹配指定角色
       { $match: { id: Number(id) } },
 
+      // 展开act数组以便处理声优和作品信息
+      { $unwind: { path: '$act', preserveNullAndEmptyArrays: true } },
+
       // 关联声优信息
       {
         $lookup: {
           from: 'people',
-          localField: 'actors',
+          localField: 'act.person',
           foreignField: '_id',
-          as: 'actorsData',
+          as: 'actorData',
         },
       },
-
-      // 展开works数组以便处理
-      { $unwind: { path: '$works', preserveNullAndEmptyArrays: true } },
 
       // 查找Galgame作品
       {
         $lookup: {
           from: 'galgames',
           let: {
-            workId: '$works.work',
-            workType: '$works.workType',
+            workId: '$act.work.workId',
+            workType: '$act.work.workType',
           },
           pipeline: [
             {
@@ -124,8 +124,8 @@ export class CharacterService {
         $lookup: {
           from: 'lightnovels',
           let: {
-            workId: '$works.work',
-            workType: '$works.workType',
+            workId: '$act.work.workId',
+            workType: '$act.work.workType',
           },
           pipeline: [
             {
@@ -236,38 +236,38 @@ export class CharacterService {
         $group: {
           _id: '$_id',
           characterData: { $first: '$$ROOT' },
-          works: {
+          act: {
             $push: {
               $cond: [
-                { $gt: [{ $size: '$galgameWork' }, 0] },
                 {
-                  type: 'Galgame',
-                  workType: '$works.workType',
-                  work: { $arrayElemAt: ['$galgameWork', 0] },
-                },
-                {
-                  $cond: [
+                  $or: [
+                    { $gt: [{ $size: '$galgameWork' }, 0] },
                     { $gt: [{ $size: '$lightNovelWork' }, 0] },
-                    {
-                      type: 'LightNovel',
-                      workType: '$works.workType',
-                      work: { $arrayElemAt: ['$lightNovelWork', 0] },
-                    },
-                    null,
                   ],
                 },
+                {
+                  person: { $arrayElemAt: ['$actorData', 0] },
+                  work: {
+                    $cond: [
+                      { $gt: [{ $size: '$galgameWork' }, 0] },
+                      { $arrayElemAt: ['$galgameWork', 0] },
+                      { $arrayElemAt: ['$lightNovelWork', 0] },
+                    ],
+                  },
+                },
+                null,
               ],
             },
           },
         },
       },
 
-      // 过滤掉null的作品
+      // 过滤掉null的act条目
       {
         $addFields: {
-          works: {
+          act: {
             $filter: {
-              input: '$works',
+              input: '$act',
               cond: { $ne: ['$$this', null] },
             },
           },
@@ -277,31 +277,33 @@ export class CharacterService {
 
     const characterResult = characterAggregation[0]
     const character = characterResult.characterData
-    // work按releaseDate降序排列
-    const works = characterResult.works.sort((a, b) => {
+    const act = characterResult.act || []
+    // 按作品releaseDate降序排列
+    const sortedAct = act.sort((a, b) => {
       if (a.work && b.work) {
         return (
-          new Date(b.work.releaseDate || '1970-01-01').getTime() -
-          new Date(a.work.releaseDate || '1970-01-01').getTime()
+          new Date(b.work.releaseDate || b.work.publicationDate || '1970-01-01').getTime() -
+          new Date(a.work.releaseDate || a.work.publicationDate || '1970-01-01').getTime()
         )
       }
       return 0
     })
 
-    // 格式化作品数据
-    const formattedWorks = works
-      .map(workItem => {
-        if (!workItem.work) return null
-        const workData = workItem.work
+    // 格式化act数据，保持work结构不变
+    const formattedAct = sortedAct
+      .map(actItem => {
+        if (!actItem.work) return null
+        const workData = actItem.work
         const characterId = character._id.toString()
 
-        // 获取当前角色的CV信息（声优信息）
-        const cvInfo =
-          character.actorsData?.map(actor => ({
-            id: actor.id,
-            name: actor.name,
-            transName: actor.transName,
-          })) || []
+        // 格式化声优信息
+        const person = actItem.person
+          ? {
+              id: actItem.person.id,
+              name: actItem.person.name,
+              transName: actItem.person.transName,
+            }
+          : null
 
         // 从作品的characters数组中获取当前角色的role信息
         const getRoleFromWork = () => {
@@ -318,9 +320,12 @@ export class CharacterService {
 
         const role = getRoleFromWork()
 
-        if (workItem.type === 'Galgame') {
+        // 判断作品类型并格式化作品数据
+        let formattedWork
+        if (workData.galId) {
+          // Galgame作品
           const rateInfo = workData.rateData?.[0]
-          return {
+          formattedWork = {
             type: 'Galgame',
             galId: workData.galId,
             transTitle: workData.transTitle,
@@ -342,12 +347,12 @@ export class CharacterService {
               })) || [],
             tags: workData.tagsData?.map(t => t.name).filter(Boolean) || [],
             role: role,
-            cv: cvInfo,
+            cv: person ? [person] : [],
           }
         } else {
           const rateInfo = workData.rateData?.[0]
           const publicationDate = workData.firstVolume?.[0]?.publicationDate
-          return {
+          formattedWork = {
             type: 'LightNovel',
             novelId: workData.novelId,
             name: workData.name,
@@ -374,27 +379,24 @@ export class CharacterService {
               : null,
             publishers: workData.publishersData?.[0]?.name || '未知',
             role: role,
-            cv: cvInfo,
+            cv: person ? [person] : [],
           }
+        }
+
+        return {
+          person: person,
+          work: formattedWork,
         }
       })
       .filter(Boolean)
 
-    // 格式化声优数据
-    const formattedActors =
-      character.actorsData?.map(actor => ({
-        id: actor.id,
-        name: actor.name,
-      })) || []
-
     const response = {
       ...character,
-      works: formattedWorks,
-      actors: formattedActors,
+      act: formattedAct,
     }
     delete response.lightNovelWork
     delete response.galgameWork
-    delete response.actorsData
+    delete response.actorData
     delete response.createdAt
     delete response.updatedAt
     delete response.__v

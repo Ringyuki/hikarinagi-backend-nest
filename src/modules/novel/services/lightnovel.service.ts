@@ -808,9 +808,8 @@ export class LightNovelService {
           publisher.publisher,
           {
             $push: {
-              works: {
-                workType: 'LightNovel',
-                work: newLightNovel._id,
+              act: {
+                work: { workId: newLightNovel._id, workType: 'LightNovel' },
               },
             },
           },
@@ -840,9 +839,11 @@ export class LightNovelService {
           char.character,
           {
             $push: {
-              works: {
-                workType: 'LightNovel',
-                work: newLightNovel._id,
+              act: {
+                work: {
+                  workId: newLightNovel._id,
+                  workType: 'LightNovel',
+                },
               },
             },
           },

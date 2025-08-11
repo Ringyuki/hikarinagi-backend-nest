@@ -91,14 +91,30 @@ export class GalgameService {
       })
       .populate({
         path: 'characters.character',
-        select: 'id name transName intro transIntro image -_id',
+        select: 'id name transName intro transIntro image act -_id',
         populate: {
-          path: 'actors',
-          select: 'id name transName -_id',
+          path: 'act.person',
+          select: 'id name transName note -_id',
         },
       })
     if (!galgame) {
       throw new NotFoundException('galgame not found')
+    }
+
+    const currentGalgameId = galgame._id
+
+    if (galgame.characters && galgame.characters.length > 0) {
+      galgame.characters.forEach(characterLink => {
+        const character = characterLink.character as any
+        if (character && character.act && character.act.length > 0) {
+          character.act = character.act.filter(
+            actItem =>
+              actItem.work &&
+              actItem.work.workId &&
+              actItem.work.workId.toString() === currentGalgameId.toString(),
+          )
+        }
+      })
     }
 
     const { contributors, createdBy, lastEditBy } = await this.editHistoryService.getContributors(
@@ -969,7 +985,7 @@ export class GalgameService {
             : [charAliases].filter(Boolean)
 
           // 处理声优信息
-          const actors = chara.actors
+          const act = chara.actors
             ?.map((actor, index) => {
               const actorData = actorDetails[index]?.data
               if (!actorData) return null
@@ -995,13 +1011,16 @@ export class GalgameService {
                 : [actorAliases].filter(Boolean)
 
               return {
-                name: actor.name,
-                transName: actorData.infobox?.find(item => item.key === '简体中文名')?.value || '',
-                aliases: extractedActorAliases,
-                intro: actorData.summary || '',
-                transIntro: '',
-                image: actorData.images?.large || '',
-                labels: actorLabels,
+                person: {
+                  name: actor.name,
+                  transName:
+                    actorData.infobox?.find(item => item.key === '简体中文名')?.value || '',
+                  aliases: extractedActorAliases,
+                  intro: actorData.summary || '',
+                  transIntro: '',
+                  image: actorData.images?.large || '',
+                  labels: actorLabels,
+                },
               }
             })
             .filter(Boolean)
@@ -1015,7 +1034,7 @@ export class GalgameService {
               transIntro: '',
               image: charData.images?.large || '',
               labels: charLabels,
-              actors: actors || [],
+              act: act || [],
               relations: [],
             },
             role: chara.relation,
@@ -1284,17 +1303,17 @@ export class GalgameService {
             }))
 
             const actorIds = []
-            if (characterData.character.actors) {
-              for (const actorData of characterData.character.actors) {
+            if (characterData.character.act) {
+              for (const actData of characterData.character.act) {
                 let actor
-                const processedActorLabels = actorData.labels.map(label => ({
+                const processedActorLabels = actData.person.labels.map(label => ({
                   key: label.key,
                   value: label.value || '未知',
                 }))
 
                 const existingActor = await this.personModel
                   .findOne({
-                    name: actorData.name,
+                    name: actData.person.name,
                   })
                   .session(session)
                 if (existingActor) {
@@ -1306,7 +1325,7 @@ export class GalgameService {
                       {
                         id,
                         creator,
-                        ...actorData,
+                        ...actData.person,
                         labels: processedActorLabels,
                       },
                     ],
@@ -1338,6 +1357,11 @@ export class GalgameService {
               character = existingCharacter
             } else {
               const id = await this.counterService.getNextSequence('characterId')
+              const actRecords = actorIds.map(actorId => ({
+                person: actorId,
+                work: { workId: newGalgame._id as Types.ObjectId, workType: 'Galgame' as const },
+              }))
+
               const [newCharacter] = await this.characterModel.create(
                 [
                   {
@@ -1345,7 +1369,7 @@ export class GalgameService {
                     creator,
                     ...characterData.character,
                     labels: processedCharacterLabels,
-                    actors: actorIds,
+                    act: actRecords,
                   },
                 ],
                 { session },
@@ -1476,8 +1500,10 @@ export class GalgameService {
         }
 
         const character = await this.characterModel.findById(char.character).session(session)
-        const hasExistingWork = character.works.some(
-          work => work.workType === 'Galgame' && work.work.equals(newGalgame._id as Types.ObjectId),
+        const hasExistingWork = character.act.some(
+          actItem =>
+            actItem.work?.workType === 'Galgame' &&
+            actItem.work?.workId?.equals(newGalgame._id as Types.ObjectId),
         )
 
         if (!hasExistingWork) {
@@ -1485,9 +1511,8 @@ export class GalgameService {
             char.character,
             {
               $push: {
-                works: {
-                  workType: 'Galgame',
-                  work: newGalgame._id,
+                act: {
+                  work: { workId: newGalgame._id, workType: 'Galgame' },
                 },
               },
             },
@@ -1497,8 +1522,10 @@ export class GalgameService {
 
         updatedCharacterIds.add(char.character.toString())
         // 更新角色声优关联
-        if (character.actors && character.actors.length > 0) {
-          for (const actorId of character.actors) {
+        if (character.act && character.act.length > 0) {
+          for (const actItem of character.act) {
+            const actorId = actItem.person
+            if (!actorId) continue
             if (updatedPersonIds.has(actorId.toString())) {
               continue
             }

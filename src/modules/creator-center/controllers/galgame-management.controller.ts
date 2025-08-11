@@ -1,4 +1,4 @@
-import { Controller, Req, Body, Param, Put } from '@nestjs/common'
+import { Controller, Req, Body, Param, Put, Get } from '@nestjs/common'
 import { GalgameManagementService } from '../services/galgame-management.service'
 import { UpdateGalgameDto } from '../dto/galgame/update-galgame.dto'
 import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
@@ -21,6 +21,15 @@ export class GalgameManagementController {
     @Req() req: RequestWithUser,
   ) {
     const galgame = await this.galgameManagementService.updateGalgame(galId, data, req)
+    return {
+      data: galgame,
+    }
+  }
+
+  @Get(':galId')
+  @UseGuards(JwtAuthGuard)
+  async getGalgame(@Param('galId') galId: string, @Req() req: RequestWithUser) {
+    const galgame = await this.galgameManagementService.getGalgame(galId, req)
     return {
       data: galgame,
     }

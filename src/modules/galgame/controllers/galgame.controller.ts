@@ -114,11 +114,12 @@ export class GalgameController {
     }
   }
 
-  @Get('fetch-bangumi-data/:id')
+  @Get('bangumi/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(HikariUserGroup.CREATOR)
   async fetchBangumiData(@Param('id') id: string) {
     const bangumiData = await this.galgameService.fetchGameDataFromBangumi(id)
+    console.log(bangumiData)
     return {
       data: bangumiData,
     }

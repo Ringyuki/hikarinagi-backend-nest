@@ -6,6 +6,7 @@ import {
   IsBoolean,
   ValidateNested,
   IsIn,
+  IsObject,
 } from 'class-validator'
 import { Type } from 'class-transformer'
 
@@ -216,6 +217,16 @@ export class ActorDto {
   labels?: PersonLabelDto[]
 }
 
+export class ActDto {
+  @IsOptional()
+  @IsObject()
+  person?: ActorDto
+
+  @IsOptional()
+  @IsObject()
+  work?: any
+}
+
 export class CharacterLabelDto {
   @IsString()
   key: string
@@ -265,12 +276,6 @@ export class CharacterDto {
 
   @IsOptional()
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => ActorDto)
-  actors?: ActorDto[]
-
-  @IsOptional()
-  @IsArray()
   relations?: any[]
 
   @IsOptional()
@@ -282,7 +287,7 @@ export class CharacterDto {
 
   @IsOptional()
   @IsArray()
-  works?: any[]
+  act?: ActDto[]
 
   @IsOptional()
   @IsString()

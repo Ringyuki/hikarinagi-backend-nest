@@ -4,21 +4,21 @@ import { CharacterToObjectOptions } from '../../../types/mongoose-extensions'
 
 export type CharacterDocument = Character & Document
 
-@Schema()
-export class Work {
-  @Prop({
-    type: String,
-    required: true,
-    enum: ['Galgame', 'LightNovel'],
-  })
-  workType: string
+// @Schema()
+// export class Work {
+//   @Prop({
+//     type: String,
+//     required: true,
+//     enum: ['Galgame', 'LightNovel'],
+//   })
+//   workType: string
 
-  @Prop({
-    type: Types.ObjectId,
-    refPath: 'works.workType',
-  })
-  work: Types.ObjectId
-}
+//   @Prop({
+//     type: Types.ObjectId,
+//     refPath: 'works.workType',
+//   })
+//   work: Types.ObjectId
+// }
 
 @Schema({ _id: false })
 export class Label {
@@ -117,13 +117,40 @@ export class Character {
   @Prop({ type: String })
   image: string
 
-  @Prop({ type: [Work] })
-  works: Work[]
+  // @Prop({ type: [Work] })
+  // works: Work[]
 
   @Prop({
-    type: [{ type: Types.ObjectId, ref: 'Person' }],
+    type: [
+      {
+        _id: false,
+        person: {
+          type: Types.ObjectId,
+          ref: 'Person',
+        },
+        work: {
+          workId: {
+            type: Types.ObjectId,
+            required: true,
+            refPath: 'act.work.workType',
+          },
+          workType: {
+            type: String,
+            required: true,
+            enum: ['Galgame', 'LightNovel'],
+          },
+        },
+      },
+    ],
+    default: [],
   })
-  actors: Types.ObjectId[]
+  act: {
+    person?: Types.ObjectId
+    work: {
+      workId: Types.ObjectId
+      workType: 'Galgame' | 'LightNovel'
+    }
+  }[]
 
   @Prop({ type: [Label] })
   labels: Label[]

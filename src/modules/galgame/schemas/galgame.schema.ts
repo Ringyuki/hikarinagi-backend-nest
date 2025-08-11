@@ -184,6 +184,11 @@ export class GalgameCreator {
             name: character.character?.name || '',
             image: character.character?.image || '',
             role: character.role || '',
+            act:
+              character.character?.act?.map(act => ({
+                person: act.person?._id || act.person,
+                work: act.work,
+              })) || [],
           }))
         }
         if (ret.creator) {

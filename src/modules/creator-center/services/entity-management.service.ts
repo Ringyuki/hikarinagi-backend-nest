@@ -96,6 +96,141 @@ export class EntityManagementService {
     }
   }
 
+  async getEntity(
+    type: 'person' | 'producer' | 'character' | 'tag',
+    id: number,
+    req: RequestWithUser,
+  ) {
+    if (!id) {
+      throw new BadRequestException('Id is required')
+    }
+
+    const mapToEntityType = (type: 'person' | 'producer' | 'character' | 'tag'): EntityType => {
+      switch (type) {
+        case 'person':
+          return EntityType.Person
+        case 'producer':
+          return EntityType.Producer
+        case 'character':
+          return EntityType.Character
+        case 'tag':
+          return EntityType.Tag
+      }
+    }
+
+    const entityType = mapToEntityType(type)
+    const hikariUserGroup = req.user.hikariUserGroup
+    const Model = this.getModel(entityType)
+    if (!Model) {
+      throw new BadRequestException('Invalid entity type')
+    }
+
+    if (entityType === EntityType.Tag) {
+      const tag = await this.tagModel
+        .findOne({ id })
+        .select('id name aliases description status createdAt updatedAt -_id')
+        .lean()
+
+      if (!tag) {
+        throw new NotFoundException('Entity not found')
+      }
+
+      if (
+        tag.status !== 'published' &&
+        hikariUserGroup !== 'admin' &&
+        hikariUserGroup !== 'superAdmin'
+      ) {
+        throw new ForbiddenException('No permission to access this entity')
+      }
+
+      return tag
+    }
+
+    let entityDoc = await Model.findOne({ id }).select('-__v')
+    if (!entityDoc) {
+      throw new NotFoundException('Entity not found')
+    }
+
+    // Populate relations based on type
+    if (entityType === EntityType.Person || entityType === EntityType.Producer) {
+      entityDoc = await entityDoc.populate([
+        {
+          path: 'works.work',
+          select: 'name transTitle name_cn originTitle novelId galId cover status',
+        },
+      ])
+    }
+
+    if (entityType === EntityType.Character) {
+      entityDoc = await entityDoc.populate([
+        {
+          path: 'act.person',
+          select: 'name transName image',
+        },
+        {
+          path: 'relations.character',
+          select: 'name transName image',
+        },
+        {
+          path: 'act.work.workId',
+          select: 'name transTitle name_cn originTitle novelId galId cover status',
+        },
+      ])
+    }
+
+    const entity = entityDoc.toObject()
+
+    if (Array.isArray((entity as any).works)) {
+      const filteredWorks = (entity as any).works.filter((w: any) => w?.work)
+      ;(entity as any).works = filteredWorks.map((workItem: any) => {
+        const work = workItem.work
+        const nameCandidate =
+          work?.name ||
+          work?.transTitle ||
+          work?.name_cn ||
+          (Array.isArray(work?.originTitle) ? work.originTitle[0] : '') ||
+          ''
+        return {
+          workType: workItem.workType,
+          work: work?._id,
+          name: nameCandidate,
+          cover: work?.cover,
+        }
+      })
+    }
+
+    if (entityType === EntityType.Character && Array.isArray((entity as any).act)) {
+      ;(entity as any).act = (entity as any).act.map((actItem: any) => {
+        const workDoc = actItem?.work?.workId
+        const nameCandidate =
+          workDoc?.name ||
+          workDoc?.transTitle ||
+          workDoc?.name_cn ||
+          (Array.isArray(workDoc?.originTitle) ? workDoc.originTitle[0] : '') ||
+          ''
+        return {
+          person: actItem.person,
+          work: {
+            workType: actItem?.work?.workType,
+            workId: workDoc?._id,
+            name: nameCandidate,
+            cover: workDoc?.cover,
+          },
+        }
+      })
+    }
+
+    if (
+      (entity as any).status !== 'published' &&
+      hikariUserGroup !== 'admin' &&
+      hikariUserGroup !== 'superAdmin'
+    ) {
+      throw new ForbiddenException('No permission to access this entity')
+    }
+
+    return entity
+  }
+
   async updateEntity(type: EntityType, id: number, data: UpdateEntityDto, req: RequestWithUser) {
     const Model = this.getModel(type)
     const hikariUserGroup = req.user.hikariUserGroup
