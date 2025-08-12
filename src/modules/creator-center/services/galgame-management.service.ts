@@ -183,14 +183,7 @@ export class GalgameManagementService {
       name: character.character.name,
       image: character.character.image,
       role: character.role,
-      act: character.character.act
-        ? character.character.act.filter(
-            (actItem: any) =>
-              actItem.work &&
-              actItem.work.workId &&
-              actItem.work.workId.toString() === galgame._id.toString(),
-          )
-        : [],
+      act: character.character.act,
     }))
     result.tags = galgame.tags.map((tag: any) => tag.tag)
 

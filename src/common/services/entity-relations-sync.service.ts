@@ -124,14 +124,13 @@ export class EntityRelationsSyncService {
     const characterIdsToRemove = oldCharacterIds.filter(id => !newCharacterIds.includes(id))
     const existingCharacterIds = newCharacterIds.filter(id => oldCharacterIds.includes(id))
 
-    if (existingCharacterIds.length > 0) {
-      const hasActorChanges = await this.detectActorChanges(
-        originalData,
-        newData,
-        existingCharacterIds,
-        workId,
-      )
-      if (hasActorChanges) {
+    if (existingCharacterIds.length > 0 && workType === 'Galgame') {
+      const hasExistingActors = await this.personModel.exists({
+        'works.work': workId,
+        'works.isActorWork': true,
+      })
+
+      if (hasExistingActors) {
         await this.handleActorChangesForExistingCharacters(
           originalData,
           newData,
@@ -219,7 +218,11 @@ export class EntityRelationsSyncService {
       const actorIds: string[] = []
       charactersWithActors.forEach(character => {
         if (character.act && Array.isArray(character.act)) {
-          character.act.forEach(actItem => {
+          const matchingActItems = character.act.filter(
+            actItem => actItem.work && actItem.work.workId.equals(workId),
+          )
+
+          matchingActItems.forEach(actItem => {
             if (actItem.person) {
               actorIds.push(actItem.person.toString())
             }
@@ -307,82 +310,6 @@ export class EntityRelationsSyncService {
     }
   }
 
-  private async detectActorChanges(
-    originalData: any,
-    newData: any,
-    characterIds: string[],
-    workId: Types.ObjectId,
-  ): Promise<boolean> {
-    try {
-      // 获取当前角色的声优信息
-      const currentCharacters = await this.characterModel
-        .find({ _id: { $in: characterIds } })
-        .select('act')
-        .lean()
-
-      // 构建当前声优映射 (characterId -> actorIds)
-      const currentActorMap = new Map<string, Set<string>>()
-      currentCharacters.forEach(character => {
-        const characterId = character._id.toString()
-        const actorIds = new Set<string>()
-
-        if (character.act && Array.isArray(character.act)) {
-          character.act
-            .filter(actItem => actItem.work && actItem.work.workId.equals(workId))
-            .forEach(actItem => {
-              if (actItem.person) {
-                actorIds.add(actItem.person.toString())
-              }
-            })
-        }
-        currentActorMap.set(characterId, actorIds)
-      })
-
-      // 构建新的声优映射（从更新数据中）
-      const newActorMap = new Map<string, Set<string>>()
-      if (newData.characters && Array.isArray(newData.characters)) {
-        newData.characters.forEach(character => {
-          const characterId = (character._id || character.character).toString()
-          if (characterIds.includes(characterId)) {
-            const actorIds = new Set<string>()
-
-            if (character.act && Array.isArray(character.act)) {
-              character.act.forEach(actItem => {
-                if (actItem.person) {
-                  actorIds.add(actItem.person.toString())
-                }
-              })
-            }
-            newActorMap.set(characterId, actorIds)
-          }
-        })
-      }
-
-      // 比较每个角色的声优变化
-      for (const characterId of characterIds) {
-        const currentActors = currentActorMap.get(characterId) || new Set()
-        const newActors = newActorMap.get(characterId) || new Set()
-
-        // 检查是否有新增或移除的声优
-        const addedActors = [...newActors].filter(id => !currentActors.has(id))
-        const removedActors = [...currentActors].filter(id => !newActors.has(id))
-
-        if (addedActors.length > 0 || removedActors.length > 0) {
-          this.logger.log(
-            `Detected actor changes for character ${characterId}: +${addedActors.length}, -${removedActors.length}`,
-          )
-          return true
-        }
-      }
-
-      return false
-    } catch (error) {
-      this.logger.error('Error detecting actor changes:', error)
-      // 出错时保守处理，返回true以确保同步
-      return true
-    }
-  }
-
   private async handleActorChangesForExistingCharacters(
     originalData: any,
     newData: any,
@@ -412,13 +339,15 @@ export class EntityRelationsSyncService {
           const newActorIdsFromDB = new Set<string>()
           currentCharacters.forEach(character => {
             if (character.act && Array.isArray(character.act)) {
-              character.act
-                .filter(actItem => actItem.work && actItem.work.workId.equals(workId))
-                .forEach(actItem => {
-                  if (actItem.person) {
-                    newActorIdsFromDB.add(actItem.person.toString())
-                  }
-                })
+              const matchingActItems = character.act.filter(
+                actItem => actItem.work && actItem.work.workId.equals(workId),
+              )
+
+              matchingActItems.forEach(actItem => {
+                if (actItem.person) {
+                  newActorIdsFromDB.add(actItem.person.toString())
+                }
+              })
             }
           })
 
