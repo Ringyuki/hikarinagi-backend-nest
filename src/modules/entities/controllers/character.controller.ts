@@ -16,7 +16,6 @@ export class CharacterController {
     const cacheKey = `character-detail:${id}`
     const cachedData = await this.cacheManager.get(cacheKey)
     if (cachedData) {
-      console.log('cachedData')
       return {
         data: cachedData,
         cached: true,
@@ -26,7 +25,6 @@ export class CharacterController {
     const character = await this.characterService.findById(id, req)
 
     await this.cacheManager.set(cacheKey, character, 60 * 60 * 24)
-    console.log('character')
     return {
       data: character,
     }
