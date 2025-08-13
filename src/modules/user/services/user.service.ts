@@ -93,7 +93,7 @@ export class UserService {
       uuid: createUserDto.uuid,
     })
     if (!result.verified) {
-      throw new UnauthorizedException(result.message)
+      throw new ForbiddenException(result.message)
     }
 
     const existingUnVerifiedUser = await this.userModel.findOne({
@@ -101,9 +101,12 @@ export class UserService {
       isVerified: false,
     })
     if (!existingUnVerifiedUser) {
+      const userId = (await this.counterService.getNextSequence('userId')).toString()
       const createdUser = new this.userModel({
         ...createUserDto,
-        userId: (await this.counterService.getNextSequence('userId')).toString(),
+        // uuid交给pre validate生成
+        uuid: '',
+        userId,
         isVerified: true,
       })
       const savedUser = await createdUser.save()

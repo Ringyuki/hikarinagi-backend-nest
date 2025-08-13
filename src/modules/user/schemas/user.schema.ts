@@ -40,7 +40,7 @@ export type UserDocument = User &
 export class User {
   @Prop({
     required: function () {
-      return this.uuid
+      return this.isVerified
     },
     unique: true,
   })
@@ -117,26 +117,18 @@ UserSchema.methods.comparePassword = async function (password: string): Promise<
   return bcrypt.compare(password, this.password)
 }
 
-UserSchema.pre('save', async function (next) {
-  // 如果用户是新用户，则生成 uuid
-  if (!this.uuid) {
-    this.uuid = uuidv4()
-  }
+UserSchema.pre('validate', function () {
+  if (!this.uuid) this.uuid = uuidv4()
+})
+
+UserSchema.pre('save', async function () {
   // 如果refresh token 过期，则删除
   if (this.hikariRefreshToken) {
     this.hikariRefreshToken = this.hikariRefreshToken.filter(token => token.expiresAt > new Date())
   }
 
   // 仅在密码被修改时执行哈希
-  if (!this.isModified('password')) {
-    return next()
-  }
-
-  try {
-    const salt = await bcrypt.genSalt(10)
-    this.password = await bcrypt.hash(this.password, salt)
-    next()
-  } catch (error) {
-    next(error as Error)
-  }
+  if (!this.isModified('password')) return
+  const salt = await bcrypt.genSalt(10)
+  this.password = await bcrypt.hash(this.password, salt)
 })
