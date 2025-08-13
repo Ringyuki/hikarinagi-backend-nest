@@ -27,8 +27,28 @@ export class EnvironmentValidator {
 
     // redis
     { key: 'REDIS_HOST', required: true, type: 'string', description: 'Redis 主机地址' },
-    { key: 'REDIS_PORT', required: true, type: 'number', description: 'Redis 端口' },
+    {
+      key: 'REDIS_PORT',
+      required: true,
+      type: 'number',
+      description: 'Redis 端口',
+      defaultValue: 6379,
+    },
     { key: 'REDIS_PASSWORD', required: false, type: 'string', description: 'Redis 密码' },
+    {
+      key: 'REDIS_KEY_PREFIX',
+      required: false,
+      type: 'string',
+      description: 'Redis 键前缀',
+      defaultValue: 'hikarinagi',
+    },
+    {
+      key: 'REDIS_DB',
+      required: false,
+      type: 'number',
+      description: 'Redis 数据库',
+      defaultValue: 0,
+    },
 
     // JWT
     { key: 'JWT_SECRET', required: false, type: 'string', description: 'JWT 签名密钥' },

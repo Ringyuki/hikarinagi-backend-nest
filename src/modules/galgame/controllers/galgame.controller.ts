@@ -45,7 +45,7 @@ export class GalgameController {
       }
     }
     const result = await this.galgameService.getGalgameList(req, query)
-    await this.cacheManager.set(cacheKey, result, 60 * 60 * 24)
+    await this.cacheManager.set(cacheKey, result, 60 * 60 * 24 * 1000)
     return {
       data: result,
     }

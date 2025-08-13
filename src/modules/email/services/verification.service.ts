@@ -20,7 +20,8 @@ export class VerificationService {
     req?: RequestWithUser,
   ): Promise<{
     success: boolean
-    uuid: string
+    uuid?: string
+    message?: string
   }> {
     if (type !== 'register' && type !== 'email-change' && req.user.email !== email) {
       throw new BadRequestException('邮箱不匹配')
@@ -29,6 +30,17 @@ export class VerificationService {
     const code = this.generateVerificationCode()
     const uuid = uuidv4()
     const expirationTime = 60 * 10 // 10 minutes
+
+    if (type === 'email-change') {
+      const key = `isChangingEmail:${req.user._id}`
+      const isChangingEmail = await this.cacheManager.get(key)
+      if (!isChangingEmail) {
+        return {
+          success: false,
+          message: '现有邮箱验证已过期或未验证',
+        }
+      }
+    }
 
     const key = `verificationCode:${uuid}-${email}`
     const value = {
@@ -52,12 +64,16 @@ export class VerificationService {
     }
   }
 
-  async verifyCode(verificationDto: VerificationCodeDto): Promise<{
+  async verifyCode(
+    verificationDto: VerificationCodeDto,
+    req?: RequestWithUser,
+  ): Promise<{
     verified: boolean
     message?: string
   }> {
     const { uuid, code, email } = verificationDto
     const key = `verificationCode:${uuid}-${email}`
+    const expirationTime = 60 * 10 // 10 minutes
 
     try {
       const value = await this.cacheManager.get<string>(key)
@@ -76,6 +92,14 @@ export class VerificationService {
           verified: false,
           message: '验证码错误',
         }
+      }
+
+      if (storedData.type === 'request-email-change') {
+        const key = `isChangingEmail:${req.user._id}`
+        const value = {
+          createdAt: Date.now(),
+        }
+        await this.cacheManager.set(key, JSON.stringify(value), expirationTime * 1000 * 6) // 60 minutes
       }
 
       await this.cacheManager.del(key)

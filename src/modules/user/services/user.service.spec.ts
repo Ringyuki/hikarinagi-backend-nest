@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { getModelToken } from '@nestjs/mongoose'
 import { JwtService } from '@nestjs/jwt'
 import { UserService } from './user.service'
@@ -42,6 +43,12 @@ describe('UserService', () => {
     getNextSequence: jest.fn(),
   }
 
+  const mockCacheManager = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  }
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -69,6 +76,10 @@ describe('UserService', () => {
         {
           provide: CounterService,
           useValue: mockCounterService,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
         },
       ],
     }).compile()

@@ -4,6 +4,7 @@ import {
   NotFoundException,
   UnauthorizedException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
@@ -15,6 +16,10 @@ import { VerificationForSignupDto, CreateUserDto, LoginUserDto, RefreshTokenDto 
 import { HikariConfigService } from '../../../common/config/configs'
 import { VerificationService } from '../../email/services/verification.service'
 import { CounterService } from '../../shared/services/counter.service'
+import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
+import { UpdateUserEmailDto } from '../dto/user/update-user-email.dto'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Cache } from 'cache-manager'
 
 @Injectable()
 export class UserService {
@@ -25,6 +30,7 @@ export class UserService {
     private configService: HikariConfigService,
     private verificationService: VerificationService,
     private counterService: CounterService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
   async sendVerificationEmailForSignUp(verificationForSignupDto: VerificationForSignupDto) {
     if (!this.configService.get('allowRegister')) {
@@ -93,7 +99,7 @@ export class UserService {
       uuid: createUserDto.uuid,
     })
     if (!result.verified) {
-      throw new UnauthorizedException(result.message)
+      throw new ForbiddenException(result.message)
     }
 
     const existingUnVerifiedUser = await this.userModel.findOne({
@@ -101,9 +107,12 @@ export class UserService {
       isVerified: false,
     })
     if (!existingUnVerifiedUser) {
+      const userId = (await this.counterService.getNextSequence('userId')).toString()
       const createdUser = new this.userModel({
         ...createUserDto,
-        userId: (await this.counterService.getNextSequence('userId')).toString(),
+        // uuid交给pre validate生成
+        uuid: '',
+        userId,
         isVerified: true,
       })
       const savedUser = await createdUser.save()
@@ -276,5 +285,51 @@ export class UserService {
       throw new NotFoundException('用户不存在')
     }
     return user
+  }
+
+  async requestUpdateEmail(req: RequestWithUser): Promise<{
+    uuid: string
+  }> {
+    const { uuid } = await this.verificationService.requestVerificationCode(
+      req.user.email,
+      'request-email-change',
+      req,
+    )
+    return {
+      uuid,
+    }
+  }
+
+  async updateEmail(req: RequestWithUser, updateUserEmailDto: UpdateUserEmailDto): Promise<void> {
+    const result = await this.verificationService.verifyCode({
+      email: updateUserEmailDto.email,
+      code: updateUserEmailDto.code,
+      uuid: updateUserEmailDto.uuid,
+    })
+    if (!result.verified) {
+      throw new ForbiddenException(result.message)
+    }
+
+    const key = `isChangingEmail:${req.user._id}`
+    const isChangingEmail = await this.cacheManager.get(key)
+    if (!isChangingEmail) {
+      throw new ForbiddenException('现有邮箱验证已过期或未验证')
+    }
+
+    const existingEmail = await this.userModel.findOne({
+      email: updateUserEmailDto.email,
+    })
+    if (existingEmail) {
+      throw new ConflictException('邮箱已被使用')
+    }
+
+    const user = await this.userModel.findOne({ userId: req.user.userId })
+    if (!user) {
+      throw new NotFoundException('用户不存在')
+    }
+
+    await this.cacheManager.del(key)
+    user.email = updateUserEmailDto.email
+    await user.save()
   }
 }

@@ -9,6 +9,7 @@ import {
   Headers,
   HttpStatus,
   HttpCode,
+  Req,
 } from '@nestjs/common'
 import { UserService } from '../services/user.service'
 import { VerificationForSignupDto, CreateUserDto, LoginUserDto, RefreshTokenDto } from '../dto/user'
@@ -17,10 +18,15 @@ import { RolesGuard } from '../../auth/guards/roles.guard'
 import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
 import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
 import { Roles } from '../../auth/decorators/roles.decorator'
+import { VerificationService } from '../../email/services/verification.service'
+import { UpdateUserEmailDto } from '../dto/user/update-user-email.dto'
 
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly verificationService: VerificationService,
+  ) {}
 
   @Post('verification-for-signup')
   async verificationForSignup(@Body() verificationForSignupDto: VerificationForSignupDto) {
@@ -83,6 +89,25 @@ export class UserController {
     const user = await this.userService.findByUsername(username)
     return {
       data: user,
+    }
+  }
+
+  @Post('change-email/request')
+  async requestUpdateEmail(@Req() req: RequestWithUser) {
+    const { uuid } = await this.userService.requestUpdateEmail(req)
+    return {
+      data: {
+        uuid,
+      },
+      message: 'verification email sent',
+    }
+  }
+
+  @Post('change-email/update')
+  async updateEmail(@Req() req: RequestWithUser, @Body() updateUserEmailDto: UpdateUserEmailDto) {
+    await this.userService.updateEmail(req, updateUserEmailDto)
+    return {
+      message: 'email updated',
     }
   }
 }

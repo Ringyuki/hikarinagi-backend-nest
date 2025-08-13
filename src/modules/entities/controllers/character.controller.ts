@@ -24,7 +24,7 @@ export class CharacterController {
 
     const character = await this.characterService.findById(id, req)
 
-    await this.cacheManager.set(cacheKey, character, 60 * 60 * 24)
+    await this.cacheManager.set(cacheKey, character, 60 * 60 * 24 * 1000)
     return {
       data: character,
     }

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
+import { VerificationService } from '../../email/services/verification.service'
 import { UserController } from './user.controller'
 import { UserService } from '../services/user.service'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
@@ -23,6 +24,10 @@ describe('UserController', () => {
         {
           provide: UserService,
           useValue: mockUserService,
+        },
+        {
+          provide: VerificationService,
+          useValue: { requestVerificationCode: jest.fn(), verifyCode: jest.fn() },
         },
       ],
     })
