@@ -1,4 +1,13 @@
-import { Controller, Post, Body, UseGuards, HttpCode, HttpStatus, Req } from '@nestjs/common'
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  Req,
+  BadRequestException,
+} from '@nestjs/common'
 import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
 import { ThrottlerGuard } from '@nestjs/throttler'
 import { EmailService } from '../services/email.service'
@@ -39,6 +48,11 @@ export class EmailController {
       requestDto.type,
       req,
     )
+
+    if (!result.success) {
+      throw new BadRequestException(result.message)
+    }
+
     return {
       data: {
         uuid: result.uuid,
@@ -51,8 +65,8 @@ export class EmailController {
 
   @Post('verification-code/verify')
   @HttpCode(HttpStatus.OK)
-  async verifyCode(@Body() verificationDto: VerificationCodeDto) {
-    const result = await this.verificationService.verifyCode(verificationDto)
+  async verifyCode(@Body() verificationDto: VerificationCodeDto, @Req() req: RequestWithUser) {
+    const result = await this.verificationService.verifyCode(verificationDto, req)
     return {
       data: {
         verified: result.verified,

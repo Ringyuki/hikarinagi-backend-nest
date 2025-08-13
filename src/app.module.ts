@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose'
 import { CacheModule } from '@nestjs/cache-manager'
 import { ThrottlerGuard, ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler'
 import { redisStore } from 'cache-manager-redis-yet'
+import { KeyvAdapter } from 'cache-manager'
 import config from './common/config/configs'
 import { HikariConfigModule } from './common/config/config.module'
 import { HikariConfigService } from './common/config/configs'
@@ -63,15 +64,20 @@ import { VersionService } from './common/services/version.service'
         const host = configService.get('redis.host')
         const port = configService.get('redis.port')
         const password = configService.get('redis.password')
+        const keyPrefix = configService.get('redis.keyPrefix')
+        const database = configService.get('redis.database')
 
         return {
-          store: await redisStore({
-            socket: {
-              host,
-              port,
-            },
-            password: password || undefined,
-          }),
+          stores: [
+            new KeyvAdapter(
+              await redisStore({
+                socket: { host, port },
+                password: password || undefined,
+                keyPrefix,
+                database,
+              }),
+            ),
+          ],
         }
       },
     }),

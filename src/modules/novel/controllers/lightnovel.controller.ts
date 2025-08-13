@@ -28,7 +28,7 @@ export class LightNovelController {
       }
     }
     const novels = await this.lightNovelService.getLightNovelList(req, query)
-    await this.cacheManager.set(cacheKey, novels, 60 * 60 * 24)
+    await this.cacheManager.set(cacheKey, novels, 60 * 60 * 24 * 1000)
     return {
       data: novels,
     }
