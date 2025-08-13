@@ -277,6 +277,37 @@ export class PersonService {
 
     const personData = personAggregation[0]
 
+    const worksToDelete = []
+
+    const workIdMap = new Map()
+    const duplicateWorks = []
+
+    personData.works.forEach(workItem => {
+      if (workItem.workType === 'Galgame' && workItem.galgameWork?.[0]) {
+        const workId = workItem.galgameWork[0]._id.toString()
+        if (workIdMap.has(workId)) {
+          duplicateWorks.push({
+            work: workItem.galgameWork[0]._id,
+            workType: 'Galgame',
+          })
+        } else {
+          workIdMap.set(workId, true)
+        }
+      } else if (workItem.workType === 'LightNovel' && workItem.lightNovelWork?.[0]) {
+        const workId = workItem.lightNovelWork[0]._id.toString()
+        if (workIdMap.has(workId)) {
+          duplicateWorks.push({
+            work: workItem.lightNovelWork[0]._id,
+            workType: 'LightNovel',
+          })
+        } else {
+          workIdMap.set(workId, true)
+        }
+      }
+    })
+
+    worksToDelete.push(...duplicateWorks)
+
     // 格式化works数据，并按发布日期降序排列
     const formattedWorks = personData.works
       .map(workItem => {
@@ -332,6 +363,11 @@ export class PersonService {
           if (voicedCharacters.length > 0) {
             roleInfo.roles.push('配音')
             roleInfo.voicedRoles = voicedCharacters.map(char => char.name)
+          }
+
+          if (roleInfo.roles.length === 0) {
+            worksToDelete.push({ work: work._id, workType: 'Galgame' })
+            return null
           }
 
           formattedWork = {
@@ -412,6 +448,13 @@ export class PersonService {
         const dateB = b.releaseDate || b.publicationDate || '0'
         return new Date(dateB).getTime() - new Date(dateA).getTime()
       })
+
+    if (worksToDelete.length > 0) {
+      await this.personModel.updateOne(
+        { id: Number(id) },
+        { $pull: { works: { $or: worksToDelete } } },
+      )
+    }
 
     // 获取编辑历史信息
     const entityHistory = await this.sharedEntityHistoryModel

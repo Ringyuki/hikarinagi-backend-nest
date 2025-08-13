@@ -13,6 +13,23 @@ import {
 } from 'class-validator'
 import { Types } from 'mongoose'
 
+class WorkActDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  workId: Types.ObjectId
+
+  @IsString()
+  @IsNotEmpty()
+  workType: string
+}
+
+class ActDto {
+  @ValidateNested()
+  @Type(() => WorkActDto)
+  @IsOptional()
+  work?: WorkActDto
+}
+
 class CreatorDto {
   @IsMongoId()
   @IsOptional()
@@ -59,6 +76,12 @@ class EntityDto {
   @IsString()
   @IsOptional()
   role?: string
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ActDto)
+  @IsOptional()
+  act?: ActDto[]
 }
 
 class VolumeInSeriesDto {

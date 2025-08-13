@@ -10,6 +10,7 @@ import { Person, PersonDocument } from '../../entities/schemas/person.schema'
 import { Producer, ProducerDocument } from '../../entities/schemas/producer.schema'
 import { Character, CharacterDocument } from '../../entities/schemas/character.schema'
 import { Tag, TagDocument } from '../../entities/schemas/tag.schema'
+import { Galgame, GalgameDocument } from '../../galgame/schemas/galgame.schema'
 import { GetEntityListDto } from '../dto/entity/get-entity-list.dto'
 import { UpdateEntityDto } from '../dto/entity/update-entity.dto'
 import { UpdateRequest, UpdateRequestDocument } from '../../shared/schemas/update-request.schema'
@@ -24,6 +25,7 @@ export class EntityManagementService {
     @InjectModel(Producer.name) private producerModel: Model<ProducerDocument>,
     @InjectModel(Character.name) private characterModel: Model<CharacterDocument>,
     @InjectModel(Tag.name) private tagModel: Model<TagDocument>,
+    @InjectModel(Galgame.name) private galgameModel: Model<GalgameDocument>,
     @InjectModel(UpdateRequest.name) private updateRequestModel: Model<UpdateRequestDocument>,
     private readonly updateRequestService: UpdateRequestService,
   ) {}
@@ -182,21 +184,111 @@ export class EntityManagementService {
 
     if (Array.isArray((entity as any).works)) {
       const filteredWorks = (entity as any).works.filter((w: any) => w?.work)
-      ;(entity as any).works = filteredWorks.map((workItem: any) => {
-        const work = workItem.work
-        const nameCandidate =
-          work?.name ||
-          work?.transTitle ||
-          work?.name_cn ||
-          (Array.isArray(work?.originTitle) ? work.originTitle[0] : '') ||
-          ''
-        return {
-          workType: workItem.workType,
-          work: work?._id,
-          name: nameCandidate,
-          cover: work?.cover,
+
+      const worksToDelete = []
+
+      const workIdMap = new Map()
+      const duplicateWorks = []
+
+      filteredWorks.sort((a: any, b: any) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        return dateB - dateA
+      })
+
+      filteredWorks.forEach((workItem: any, index: number) => {
+        if (!workItem?.work?._id) return
+
+        const workId = workItem.work._id.toString()
+
+        if (workIdMap.has(workId)) {
+          duplicateWorks.push({
+            work: workItem.work._id,
+            workType: workItem.workType,
+          })
+        } else {
+          workIdMap.set(workId, {
+            index,
+            item: workItem,
+          })
         }
       })
+
+      worksToDelete.push(...duplicateWorks)
+
+      const processedWorks = []
+      for (const workItem of filteredWorks) {
+        const work = workItem.work
+        let shouldDelete = false
+
+        if (entityType === EntityType.Person && workItem.workType === 'Galgame') {
+          const galgame = await this.galgameModel
+            .findById(work._id)
+            .populate('characters.character', 'act')
+            .lean()
+
+          if (galgame) {
+            const personId = entity._id.toString()
+
+            const staffRoles = []
+            if (galgame.staffs && Array.isArray(galgame.staffs)) {
+              galgame.staffs.forEach(staff => {
+                if (staff.person && staff.person.toString() === personId) {
+                  if (staff.role) {
+                    staffRoles.push(staff.role)
+                  }
+                }
+              })
+            }
+
+            const voicedCharacters = []
+            if (galgame.characters && Array.isArray(galgame.characters)) {
+              galgame.characters.forEach(char => {
+                const characterData = char.character as any
+                if (characterData && characterData.act && Array.isArray(characterData.act)) {
+                  const hasActor = characterData.act.some(
+                    (actItem: any) =>
+                      actItem.person &&
+                      actItem.person.toString() === personId &&
+                      actItem.work &&
+                      actItem.work.workType === 'Galgame' &&
+                      actItem.work.workId.toString() === work._id.toString(),
+                  )
+                  if (hasActor) {
+                    voicedCharacters.push(characterData)
+                  }
+                }
+              })
+            }
+
+            if (staffRoles.length === 0 && voicedCharacters.length === 0) {
+              worksToDelete.push({ work: work._id, workType: 'Galgame' })
+              shouldDelete = true
+            }
+          }
+        }
+
+        if (!shouldDelete) {
+          const nameCandidate =
+            work?.name ||
+            work?.transTitle ||
+            work?.name_cn ||
+            (Array.isArray(work?.originTitle) ? work.originTitle[0] : '') ||
+            ''
+          processedWorks.push({
+            workType: workItem.workType,
+            work: work?._id,
+            name: nameCandidate,
+            cover: work?.cover,
+          })
+        }
+      }
+
+      ;(entity as any).works = processedWorks
+
+      if (worksToDelete.length > 0 && entityType === EntityType.Person) {
+        await this.personModel.updateOne({ id }, { $pull: { works: { $or: worksToDelete } } })
+      }
     }
 
     if (entityType === EntityType.Character && Array.isArray((entity as any).act)) {

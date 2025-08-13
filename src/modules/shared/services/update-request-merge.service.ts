@@ -213,25 +213,54 @@ export class UpdateRequestMergeService {
           // 处理当前作品的声优条目
           let currentWorkActs = []
           if (charDto.act && charDto.act.length > 0) {
-            const newActs = charDto.act
-              .filter(act => act.person) // 只保留有声优的条目
-              .map(act => ({
-                person: new Types.ObjectId(act.person),
+            const currentWorkActsFromDto = charDto.act.filter(
+              act =>
+                act.work &&
+                act.work.workId &&
+                act.work.workId.toString() === params.itemId.toString(),
+            )
+            if (currentWorkActsFromDto.length > 0) {
+              const newActs = currentWorkActsFromDto.map(act => ({
+                person:
+                  act.person && Types.ObjectId.isValid(act.person)
+                    ? new Types.ObjectId(act.person)
+                    : null,
                 work: {
                   workId: new Types.ObjectId(params.itemId),
                   workType: 'Galgame',
                 },
               }))
 
-            currentWorkActs = newActs.filter(
-              (newAct, index, self) =>
-                index ===
-                self.findIndex(
-                  act =>
-                    act.person.toString() === newAct.person.toString() &&
-                    act.work.workId.toString() === newAct.work.workId.toString(),
-                ),
-            )
+              currentWorkActs = newActs.filter(
+                (newAct, index, self) =>
+                  index ===
+                  self.findIndex(
+                    act =>
+                      (act.person?.toString() || null) === (newAct.person?.toString() || null) &&
+                      act.work.workId.toString() === newAct.work.workId.toString(),
+                  ),
+              )
+            } else {
+              currentWorkActs = [
+                {
+                  person: null,
+                  work: {
+                    workId: new Types.ObjectId(params.itemId),
+                    workType: 'Galgame',
+                  },
+                },
+              ]
+            }
+          } else {
+            currentWorkActs = [
+              {
+                person: null,
+                work: {
+                  workId: new Types.ObjectId(params.itemId),
+                  workType: 'Galgame',
+                },
+              },
+            ]
           }
 
           // 更新角色的act数组
@@ -387,6 +416,73 @@ export class UpdateRequestMergeService {
         character: new Types.ObjectId(character._id as string),
         role: character.role,
       }))
+
+      const characterUpdates = params.mergeData.characters.map(async charDto => {
+        const characterDoc = await this.characterModel.findById(charDto._id).exec()
+        if (!characterDoc) return
+
+        // 过滤掉其他作品的act条目
+        const otherWorkActs =
+          characterDoc.act?.filter(
+            act =>
+              !(
+                act.work &&
+                act.work.workId &&
+                act.work.workId.toString() === params.itemId.toString()
+              ),
+          ) || []
+
+        // 处理当前作品的条目
+        let currentWorkActs = []
+        if (charDto.act && charDto.act.length > 0) {
+          const currentWorkActsFromDto = charDto.act.filter(
+            act =>
+              act.work &&
+              act.work.workId &&
+              act.work.workId.toString() === params.itemId.toString(),
+          )
+          if (currentWorkActsFromDto.length > 0) {
+            const newActs = currentWorkActsFromDto.map(() => ({
+              person: null,
+              work: {
+                workId: new Types.ObjectId(params.itemId),
+                workType: 'LightNovel',
+              },
+            }))
+
+            currentWorkActs = newActs.filter(
+              (newAct, index, self) =>
+                index ===
+                self.findIndex(act => act.work.workId.toString() === newAct.work.workId.toString()),
+            )
+          } else {
+            currentWorkActs = [
+              {
+                person: null,
+                work: {
+                  workId: new Types.ObjectId(params.itemId),
+                  workType: 'LightNovel',
+                },
+              },
+            ]
+          }
+        } else {
+          currentWorkActs = [
+            {
+              person: null,
+              work: {
+                workId: new Types.ObjectId(params.itemId),
+                workType: 'LightNovel',
+              },
+            },
+          ]
+        }
+
+        characterDoc.act = [...otherWorkActs, ...currentWorkActs]
+        return characterDoc.save()
+      })
+
+      await Promise.all(characterUpdates.filter(Boolean))
     }
     if (params.mergeData.illustrators) {
       updateData.illustrators = params.mergeData.illustrators.map(illustrator => ({

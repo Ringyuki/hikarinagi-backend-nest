@@ -124,22 +124,15 @@ export class EntityRelationsSyncService {
     const characterIdsToRemove = oldCharacterIds.filter(id => !newCharacterIds.includes(id))
     const existingCharacterIds = newCharacterIds.filter(id => oldCharacterIds.includes(id))
 
-    if (existingCharacterIds.length > 0 && workType === 'Galgame') {
-      const hasExistingActors = await this.personModel.exists({
-        'works.work': workId,
-        'works.isActorWork': true,
-      })
-
-      if (hasExistingActors) {
-        await this.handleActorChangesForExistingCharacters(
-          originalData,
-          newData,
-          existingCharacterIds,
-          workType,
-          workId,
-          bulkOperations,
-        )
-      }
+    if (existingCharacterIds.length > 0) {
+      await this.handleActorChangesForExistingCharacters(
+        originalData,
+        newData,
+        existingCharacterIds,
+        workType,
+        workId,
+        bulkOperations,
+      )
     }
 
     // 添加关联操作
@@ -223,6 +216,7 @@ export class EntityRelationsSyncService {
           )
 
           matchingActItems.forEach(actItem => {
+            // 只处理当前作品的声优关联
             if (actItem.person) {
               actorIds.push(actItem.person.toString())
             }
@@ -236,7 +230,6 @@ export class EntityRelationsSyncService {
         const workToAdd = {
           workType: workType === 'Galgame' ? 'Galgame' : 'LightNovel',
           work: workId,
-          isActorWork: true,
         }
 
         bulkOperations.push(
@@ -279,7 +272,7 @@ export class EntityRelationsSyncService {
         remainingCharactersWithActors.forEach(character => {
           if (character.act && Array.isArray(character.act)) {
             character.act.forEach(actItem => {
-              if (actItem.person) {
+              if (actItem.person && actItem.work && actItem.work.workId.equals(workId)) {
                 stillLinkedActorIds.add(actItem.person.toString())
               }
             })
@@ -292,7 +285,6 @@ export class EntityRelationsSyncService {
         if (actorIdsToRemove.length > 0) {
           const workToRemove = {
             work: workId,
-            isActorWork: true,
           }
 
           bulkOperations.push(
@@ -318,18 +310,47 @@ export class EntityRelationsSyncService {
     workId: Types.ObjectId,
     bulkOperations: Promise<any>[],
   ): Promise<void> {
+    // 比对原始数据和新数据中角色的声优信息
+    const originalActors = new Set<string>()
+    const newActors = new Set<string>()
+
+    // 从原始数据中提取当前作品的声优信息
+    if (originalData.characters && Array.isArray(originalData.characters)) {
+      originalData.characters.forEach(char => {
+        if (char && char.character && characterIds.includes(char.character.toString())) {
+          if (char.act && Array.isArray(char.act)) {
+            char.act.forEach(actItem => {
+              if (actItem.person && actItem.work && actItem.work.workId.equals(workId)) {
+                originalActors.add(actItem.person.toString())
+              }
+            })
+          }
+        }
+      })
+    }
+
+    // 从新数据中提取当前作品的声优信息
+    if (newData.characters && Array.isArray(newData.characters)) {
+      newData.characters.forEach(char => {
+        if (
+          char &&
+          (char._id || char.character) &&
+          characterIds.includes((char._id || char.character).toString())
+        ) {
+          if (char.act && Array.isArray(char.act)) {
+            char.act.forEach(actItem => {
+              if (actItem.person && actItem.work && actItem.work.workId.equals(workId)) {
+                newActors.add(actItem.person.toString())
+              }
+            })
+          }
+        }
+      })
+    }
+
     const delayedActorSync = new Promise<void>(resolve => {
       setTimeout(async () => {
         try {
-          // 查询 Person 表的 works 字段来确定哪些声优之前与此作品关联
-          const existingActorsInWork = await this.personModel
-            .find({
-              'works.work': workId,
-              'works.isActorWork': true,
-            })
-            .select('_id')
-            .lean()
-
           // 从数据库查询更新后角色的当前 act 信息
           const currentCharacters = await this.characterModel
             .find({ _id: { $in: characterIds } })
@@ -351,11 +372,40 @@ export class EntityRelationsSyncService {
             }
           })
 
+          // 查询该作品下所有角色的历史声优信息，以确定之前的声优关联
+          const allCharactersInWorkHistory = await this.characterModel
+            .find({
+              'act.work.workId': workId,
+            })
+            .select('act')
+            .lean()
+
+          const oldActorIdsFromCharacterAct = new Set<string>()
+          allCharactersInWorkHistory.forEach(character => {
+            if (character.act && Array.isArray(character.act)) {
+              const matchingItems = character.act.filter(
+                actItem => actItem.work && actItem.work.workId.equals(workId),
+              )
+              matchingItems.forEach(actItem => {
+                if (actItem.person) {
+                  oldActorIdsFromCharacterAct.add(actItem.person.toString())
+                }
+              })
+            }
+          })
+
+          // 查询 Person 表中确实与该作品关联且是声优的人员
+          const existingActorsInWork = await this.personModel
+            .find({
+              'works.work': workId,
+              _id: { $in: [...oldActorIdsFromCharacterAct] },
+            })
+            .select('_id')
+            .lean()
           // 将之前Person.works中的声优作为旧声优
           const oldActorIdsFromPersonWorks = new Set(
             existingActorsInWork.map(actor => actor._id.toString()),
           )
-
           // 比对找出差异
           const actorIdsToAdd = [...newActorIdsFromDB].filter(
             id => !oldActorIdsFromPersonWorks.has(id),
@@ -373,7 +423,6 @@ export class EntityRelationsSyncService {
                   works: {
                     workType: workType === 'Galgame' ? 'Galgame' : 'LightNovel',
                     work: workId,
-                    isActorWork: true,
                   },
                 },
               },
@@ -415,7 +464,6 @@ export class EntityRelationsSyncService {
                   $pull: {
                     works: {
                       work: workId,
-                      isActorWork: true,
                     },
                   },
                 },
@@ -424,7 +472,12 @@ export class EntityRelationsSyncService {
           }
 
           resolve()
-        } catch {
+        } catch (error) {
+          this.logger.error('处理现有角色声优变化时发生错误', {
+            workId: workId.toString(),
+            error: error.message,
+            stack: error.stack,
+          })
           resolve()
         }
       }, 2000) // 延迟2秒等待角色数据更新完成

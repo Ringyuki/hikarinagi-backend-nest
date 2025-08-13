@@ -53,7 +53,12 @@ export class GalgameManagementService {
         if (character.act) {
           for (const act of character.act) {
             if (act.person && typeof act.person === 'object' && act.person._id) {
-              act.person = act.person._id
+              // 确保 _id 是有效的 ObjectId 格式
+              if (Types.ObjectId.isValid(act.person._id)) {
+                act.person = act.person._id
+              } else {
+                act.person = null
+              }
             }
           }
         }

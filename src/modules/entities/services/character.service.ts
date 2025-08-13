@@ -389,7 +389,6 @@ export class CharacterService {
         }
       })
       .filter(Boolean)
-
     const response = {
       ...character,
       act: formattedAct,
