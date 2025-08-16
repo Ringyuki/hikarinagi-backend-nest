@@ -40,11 +40,10 @@ export class GalgameManagementService {
 
     const exisitedRequest = await this.updateRequestModel.findOne({
       entityId: galgame._id,
-      requestedBy: new Types.ObjectId(req.user._id),
       status: 'pending',
     })
     if (exisitedRequest) {
-      throw new BadRequestException('You have a pending update request for this item')
+      throw new BadRequestException('There are pending update requests for this item')
     }
 
     const updatedGalgame = data
