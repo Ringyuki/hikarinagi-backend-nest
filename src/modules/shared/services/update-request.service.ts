@@ -118,7 +118,10 @@ export class UpdateRequestService {
       !req.user.hikariUserGroup.includes('admin') &&
       !req.user.hikariUserGroup.includes('superAdmin')
     ) {
-      query['changes.previous.creator.userId'] = new Types.ObjectId(req.user._id)
+      query['$or'] = [
+        { 'changes.previous.creator._id': new Types.ObjectId(req.user._id) },
+        { 'changes.previous.creator.userId': new Types.ObjectId(req.user._id) },
+      ]
     }
 
     const requests = await this.getUpdateRequests(options, new Types.ObjectId(req.user._id), query)
@@ -161,10 +164,14 @@ export class UpdateRequestService {
     if (sharedEntities.includes(updateRequest.entityType)) {
       const entity = await Model.findById(updateRequest.entityId)
       const creatorUserId = entity.creator.userId.toString()
-      isCreator = creatorUserId === req.user._id.toString()
+      const creator_id = entity.creator._id.toString()
+      isCreator =
+        creatorUserId === req.user._id.toString() || creator_id === req.user._id.toString()
     } else {
       const creatorUserId = (updateRequest.changes.updated as any).creator?.userId?.toString()
-      isCreator = creatorUserId === req.user._id.toString()
+      const creator_id = (updateRequest.changes.updated as any).creator?._id?.toString()
+      isCreator =
+        creatorUserId === req.user._id.toString() || creator_id === req.user._id.toString()
     }
 
     if (
