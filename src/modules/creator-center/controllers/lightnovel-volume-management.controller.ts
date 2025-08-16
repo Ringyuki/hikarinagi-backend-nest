@@ -9,13 +9,13 @@ import { RolesGuard } from '../../auth/guards/roles.guard'
 
 @Controller('creator-center/lightnovel/volume')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(HikariUserGroup.CREATOR)
 export class LightNovelVolumeManagementController {
   constructor(
     private readonly lightNovelVolumeManagementService: LightNovelVolumeManagementService,
   ) {}
 
   @Put(':volumeId')
+  @Roles(HikariUserGroup.CREATOR)
   async updateLightNovelVolume(
     @Param('volumeId', ParseIntPipe) volumeId: number,
     @Body() data: UpdateLightNovelVolumeDto,

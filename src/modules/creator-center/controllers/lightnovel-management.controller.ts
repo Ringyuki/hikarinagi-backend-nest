@@ -9,11 +9,11 @@ import { RolesGuard } from '../../auth/guards/roles.guard'
 
 @Controller('creator-center/lightnovel')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(HikariUserGroup.CREATOR)
 export class LightNovelManagementController {
   constructor(private readonly lightNovelManagementService: LightNovelManagementService) {}
 
   @Put(':novelId')
+  @Roles(HikariUserGroup.CREATOR)
   async updateLightNovel(
     @Param('novelId') novelId: string,
     @Body() data: UpdateLightNovelDto,

@@ -10,11 +10,11 @@ import { RequestWithUser } from '../../auth/interfaces/request-with-user.interfa
 
 @Controller('creator-center/entity')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(HikariUserGroup.CREATOR)
 export class EntityManagementController {
   constructor(private readonly entityManagementService: EntityManagementService) {}
 
   @Get('/list/:type')
+  @Roles(HikariUserGroup.CREATOR)
   async getEntityList(@Param('type') type: EntityType, @Query() query: GetEntityListDto) {
     const result = await this.entityManagementService.getEntityList(type, query)
     return {
@@ -35,6 +35,7 @@ export class EntityManagementController {
   }
 
   @Put(':type/:id')
+  @Roles(HikariUserGroup.CREATOR)
   async updateEntity(
     @Param('type') type: EntityType,
     @Param('id') id: number,

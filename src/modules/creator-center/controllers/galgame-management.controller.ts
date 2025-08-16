@@ -10,11 +10,11 @@ import { RolesGuard } from '../../auth/guards/roles.guard'
 
 @Controller('creator-center/galgame')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(HikariUserGroup.CREATOR)
 export class GalgameManagementController {
   constructor(private readonly galgameManagementService: GalgameManagementService) {}
 
   @Put(':galId')
+  @Roles(HikariUserGroup.CREATOR)
   async updateGalgame(
     @Param('galId') galId: string,
     @Body() data: UpdateGalgameDto,
