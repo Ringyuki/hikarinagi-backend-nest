@@ -4,6 +4,7 @@ import { UserController } from './user.controller'
 import { UserService } from '../services/user.service'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../../auth/guards/roles.guard'
+import { UserCheckInService } from '../services/check-in/user-check-in.service'
 
 describe('UserController', () => {
   let controller: UserController
@@ -28,6 +29,10 @@ describe('UserController', () => {
         {
           provide: VerificationService,
           useValue: { requestVerificationCode: jest.fn(), verifyCode: jest.fn() },
+        },
+        {
+          provide: UserCheckInService,
+          useValue: { checkIn: jest.fn(), checkIsCheckIn: jest.fn() },
         },
       ],
     })

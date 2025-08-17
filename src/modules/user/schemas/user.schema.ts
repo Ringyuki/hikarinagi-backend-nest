@@ -87,6 +87,18 @@ export class User {
   @Prop()
   headCover?: string
 
+  @Prop({ default: 0, type: Number })
+  hikariPoint: number
+
+  @Prop({ type: Number, default: 0 })
+  checkInStreak: number
+
+  @Prop({ type: Number, default: 0 })
+  longestCheckInStreak: number
+
+  @Prop({ type: Date, default: null })
+  lastCheckInAt: Date | null
+
   @Prop({ required: true, default: 'user' })
   hikariUserGroup: string
 
@@ -119,6 +131,7 @@ UserSchema.methods.comparePassword = async function (password: string): Promise<
 
 UserSchema.pre('validate', function () {
   if (!this.uuid) this.uuid = uuidv4()
+  if (!this.hikariPoint) this.hikariPoint = 0
 })
 
 UserSchema.pre('save', async function () {

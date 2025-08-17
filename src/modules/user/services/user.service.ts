@@ -170,6 +170,7 @@ export class UserService {
       name: user.name,
       email: user.email,
       hikariUserGroup: user.hikariUserGroup,
+      hikariPoint: user.hikariPoint,
       userSetting,
     }
     const hikari_access_token = this.jwtService.sign(hikari_access_token_payload, {
@@ -234,6 +235,7 @@ export class UserService {
       name: user.name,
       email: user.email,
       hikariUserGroup: user.hikariUserGroup,
+      hikariPoint: user.hikariPoint,
       userSetting,
     }
     const hikariAccessToken = this.jwtService.sign(hikariAccessTokenPayload, {
@@ -261,6 +263,24 @@ export class UserService {
 
     user.hikariRefreshToken.splice(tokenIndex, 1)
     await user.save()
+  }
+
+  async getProfile(userId: string): Promise<UserDocument & { userSetting: UserSettingDocument }> {
+    const user = await this.userModel.findById(userId)
+    if (!user) {
+      throw new NotFoundException('User not found')
+    }
+
+    const userSetting = await this.userSettingModel.findOne({ user: user._id })
+
+    return {
+      ...user.toJSON({
+        includeEmail: true,
+        includeStatus: true,
+        notInclude_id: true,
+      }),
+      userSetting: userSetting.toJSON({ notInclude_id: true }),
+    } as unknown as UserDocument & { userSetting: UserSettingDocument }
   }
 
   async findById(id: string): Promise<UserDocument> {
