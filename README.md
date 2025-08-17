@@ -1,37 +1,9 @@
-私有后端v2, 正在开发中
+私有后端v2
 
-## Project setup
+## Contributing
 
-```bash
-$ pnpm install
-```
-
-## Compile and run the project
-
-```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
-```
+请阅读仓库根目录的 `CONTRIBUTING.md` 了解贡献与 PR 流程
 
 ## License
 
-MIT
+AGPL-3.0
