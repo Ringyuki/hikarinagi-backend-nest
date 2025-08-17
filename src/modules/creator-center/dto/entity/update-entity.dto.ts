@@ -7,9 +7,49 @@ import {
   IsMongoId,
   ValidateNested,
   IsEnum,
+  IsObject,
 } from 'class-validator'
 import { Type } from 'class-transformer'
 import { Types } from 'mongoose'
+
+class WorkActDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  workId: Types.ObjectId
+
+  @IsString()
+  @IsNotEmpty()
+  workType: string
+}
+
+class ActDto {
+  @ValidateNested()
+  @Type(() => WorkActDto)
+  @IsOptional()
+  work?: WorkActDto
+
+  @IsMongoId()
+  @IsOptional()
+  person?: Types.ObjectId
+}
+
+class CreatorDto {
+  @IsMongoId()
+  @IsOptional()
+  _id?: Types.ObjectId
+
+  @IsString()
+  @IsOptional()
+  avatar?: string
+
+  @IsString()
+  @IsNotEmpty()
+  name: string
+
+  @IsString()
+  @IsNotEmpty()
+  userId: string
+}
 
 class EntityLabel {
   @IsString()
@@ -91,4 +131,13 @@ export class UpdateEntityDto {
   @IsEnum(EntityStatus)
   @IsOptional()
   status: EntityStatus
+
+  @IsArray()
+  @IsOptional()
+  @Type(() => ActDto)
+  act: ActDto[]
+
+  @IsObject()
+  @IsOptional()
+  creator: CreatorDto
 }

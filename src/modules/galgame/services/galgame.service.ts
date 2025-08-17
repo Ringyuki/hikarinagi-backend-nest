@@ -1229,7 +1229,7 @@ export class GalgameService {
           }
           try {
             let person
-            const processedLabels = staffData.person.labels.map(label => ({
+            const processedLabels = (staffData.person.labels || []).map(label => ({
               key: label.key,
               value: label.value || '未知',
             }))
@@ -1284,7 +1284,25 @@ export class GalgameService {
         }
       }
 
-      // 5. 处理角色
+      // 5. 创建游戏 (不包含角色)
+      const galId = await this.counterService.getNextSequence('galId')
+      const initialGameData = {
+        ...req.body,
+        galId,
+        creator,
+        tags: tagIds,
+        producers: producerIds,
+        staffs: staffIds,
+        characters: [], // 暂时为空
+        createdAt: new Date(),
+        status:
+          req.user.hikariUserGroup === 'admin' || req.user.hikariUserGroup === 'superAdmin'
+            ? 'published'
+            : 'pending',
+      }
+      const [newGalgame] = await this.galgameModel.create([initialGameData], { session })
+
+      // 6. 处理角色
       const characterLinks = []
       if (galgame.characters && galgame.characters.length > 0) {
         for (const characterData of galgame.characters) {
@@ -1297,7 +1315,7 @@ export class GalgameService {
           }
           try {
             let character
-            const processedCharacterLabels = characterData.character.labels.map(label => ({
+            const processedCharacterLabels = (characterData.character.labels || []).map(label => ({
               key: label.key,
               value: label.value || '未知',
             }))
@@ -1306,7 +1324,7 @@ export class GalgameService {
             if (characterData.character.act) {
               for (const actData of characterData.character.act) {
                 let actor
-                const processedActorLabels = actData.person.labels.map(label => ({
+                const processedActorLabels = (actData.person.labels || []).map(label => ({
                   key: label.key,
                   value: label.value || '未知',
                 }))
@@ -1399,24 +1417,9 @@ export class GalgameService {
         }
       }
 
-      // 6. 创建游戏
-      const galId = await this.counterService.getNextSequence('galId')
-      const gameData = {
-        ...req.body,
-        galId,
-        creator,
-        tags: tagIds,
-        producers: producerIds,
-        staffs: staffIds,
-        characters: characterLinks,
-        createdAt: new Date(),
-        status:
-          req.user.hikariUserGroup === 'admin' || req.user.hikariUserGroup === 'superAdmin'
-            ? 'published'
-            : 'pending',
-      }
-
-      const [newGalgame] = await this.galgameModel.create([gameData], { session })
+      // 7. 更新游戏，加入角色信息
+      newGalgame.characters = characterLinks
+      await newGalgame.save({ session })
 
       if (newGalgame.status === 'pending') {
         const adminUsers = await this.userModel.find({
@@ -1435,7 +1438,7 @@ export class GalgameService {
         }
       }
 
-      // 7. 更新关联
+      // 8. 更新关联
       // 更新制作商关联
       const updatedProducerIds = new Set()
       for (const producerObj of producerIds) {
@@ -1555,7 +1558,7 @@ export class GalgameService {
         }
       }
 
-      // 8. 记录历史
+      // 9. 记录历史
       await this.editHistoryService.recordEditHistory({
         type: 'galgame',
         actionType: 'create',

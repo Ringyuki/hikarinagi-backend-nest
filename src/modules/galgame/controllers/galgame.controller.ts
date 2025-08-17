@@ -119,7 +119,6 @@ export class GalgameController {
   @Roles(HikariUserGroup.CREATOR)
   async fetchBangumiData(@Param('id') id: string) {
     const bangumiData = await this.galgameService.fetchGameDataFromBangumi(id)
-    console.log(bangumiData)
     return {
       data: bangumiData,
     }
