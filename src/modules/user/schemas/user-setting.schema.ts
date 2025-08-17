@@ -1,14 +1,21 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import mongoose from 'mongoose'
 import { Document } from 'mongoose'
+import { UserSettingToObjectOptions } from '../../../types/mongoose-extensions'
 
 export type UserSettingDocument = UserSetting & Document
 
 @Schema({
   timestamps: true,
   toJSON: {
-    transform: (_, ret) => {
+    transform: (_, ret, options: UserSettingToObjectOptions) => {
+      if (options.notInclude_id) {
+        delete ret._id
+      }
       delete ret.__v
+      delete ret.user
+      delete ret.createdAt
+      delete ret.updatedAt
       return ret
     },
   },

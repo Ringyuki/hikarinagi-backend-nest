@@ -90,6 +90,15 @@ export class User {
   @Prop({ default: 0, type: Number })
   hikariPoint: number
 
+  @Prop({ type: Number, default: 0 })
+  checkInStreak: number
+
+  @Prop({ type: Number, default: 0 })
+  longestCheckInStreak: number
+
+  @Prop({ type: Date, default: null })
+  lastCheckInAt: Date | null
+
   @Prop({ required: true, default: 'user' })
   hikariUserGroup: string
 

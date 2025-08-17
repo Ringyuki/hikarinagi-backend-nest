@@ -1,14 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
-import { Document } from 'mongoose'
+import { Document, Types } from 'mongoose'
 
-export type HikariPointsRecoderDocument = HikariPointsRecoder & Document
+export type HikariPointsRecordDocument = HikariPointsRecord & Document
 
 @Schema({
   timestamps: true,
 })
-export class HikariPointsRecoder {
+export class HikariPointsRecord {
   @Prop({ required: true, ref: 'User' })
-  userId: string
+  userId: Types.ObjectId
 
   @Prop({ required: true, enum: ['add', 'subtract'] })
   action: 'add' | 'subtract'
@@ -23,4 +23,4 @@ export class HikariPointsRecoder {
   balance: number
 }
 
-export const HikariPointsRecoderSchema = SchemaFactory.createForClass(HikariPointsRecoder)
+export const HikariPointsRecordSchema = SchemaFactory.createForClass(HikariPointsRecord)

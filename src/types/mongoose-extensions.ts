@@ -43,3 +43,7 @@ export interface PersonToObjectOptions extends MongooseToObjectOptions {
 export interface ProducerToObjectOptions extends MongooseToObjectOptions {
   _transformToUpdateRequestFormat?: boolean
 }
+
+export interface UserSettingToObjectOptions extends MongooseToObjectOptions {
+  notInclude_id?: boolean
+}

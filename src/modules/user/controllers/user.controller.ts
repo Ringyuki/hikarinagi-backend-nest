@@ -20,12 +20,15 @@ import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
 import { Roles } from '../../auth/decorators/roles.decorator'
 import { VerificationService } from '../../email/services/verification.service'
 import { UpdateUserEmailDto } from '../dto/user/update-user-email.dto'
+import { UserCheckInService } from '../services/check-in/user-check-in.service'
+import { Types } from 'mongoose'
 
 @Controller('user')
 export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly verificationService: VerificationService,
+    private readonly userCheckInService: UserCheckInService,
   ) {}
 
   @Post('verification-for-signup')
@@ -55,6 +58,29 @@ export class UserController {
     }
   }
 
+  @Post('check-in')
+  @UseGuards(JwtAuthGuard)
+  async checkIn(@Req() req: RequestWithUser) {
+    await this.userCheckInService.checkIn({
+      userId: new Types.ObjectId(req.user._id),
+      isMakeUp: false,
+    })
+    return {
+      message: 'check in success',
+    }
+  }
+
+  @Get('check-in/status')
+  @UseGuards(JwtAuthGuard)
+  async checkInStatus(@Req() req: RequestWithUser) {
+    const status = await this.userCheckInService.checkIsCheckIn(new Types.ObjectId(req.user._id))
+    return {
+      data: {
+        isCheckIn: status,
+      },
+    }
+  }
+
   @Post('refresh-token')
   async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     const result = await this.userService.refreshToken(refreshTokenDto)
@@ -76,9 +102,10 @@ export class UserController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(HikariUserGroup.USER)
   @Get('profile')
-  getProfile(@Request() req: RequestWithUser) {
+  async getProfile(@Request() req: RequestWithUser) {
+    const user = await this.userService.getProfile(req.user._id)
     return {
-      data: req.user,
+      data: user,
     }
   }
 

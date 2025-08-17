@@ -1,14 +1,12 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsString, IsMongoId, IsOptional } from 'class-validator'
-
-enum HikariPointAction {
-  ADD = 'add',
-  SUBTRACT = 'subtract',
-}
+import { IsEnum, IsNotEmpty, IsNumber, IsMongoId, IsOptional } from 'class-validator'
+import { HikariPointRecordReason } from '../../types/hikari-point/HikariPointRecordReason'
+import { HikariPointAction } from '../../types/hikari-point/HikariPointAction'
+import { Types } from 'mongoose'
 
 export class ChangeHikariPointDto {
   @IsMongoId()
   @IsNotEmpty()
-  userId: string
+  userId: Types.ObjectId
 
   @IsEnum(HikariPointAction)
   @IsOptional()
@@ -18,7 +16,7 @@ export class ChangeHikariPointDto {
   @IsNotEmpty()
   amount: number
 
-  @IsString()
+  @IsEnum(HikariPointRecordReason)
   @IsNotEmpty()
-  reason: string
+  reason: HikariPointRecordReason
 }
