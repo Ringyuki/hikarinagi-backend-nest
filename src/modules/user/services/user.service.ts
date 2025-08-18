@@ -271,7 +271,13 @@ export class UserService {
       throw new NotFoundException('User not found')
     }
 
-    const userSetting = await this.userSettingModel.findOne({ user: user._id })
+    let userSetting = await this.userSettingModel.findOne({ user: user._id })
+    if (!userSetting) {
+      const createdUserSetting = await this.userSettingModel.create({ user: user._id })
+      user.setting = createdUserSetting._id as mongoose.Types.ObjectId
+      await user.save()
+      userSetting = createdUserSetting
+    }
 
     return {
       ...user.toJSON({
