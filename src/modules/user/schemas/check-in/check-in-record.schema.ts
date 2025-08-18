@@ -5,6 +5,15 @@ export type CheckInRecordDocument = CheckInRecord & Document
 
 @Schema({
   timestamps: true,
+  toJSON: {
+    transform: (_, ret) => {
+      delete ret._id
+      delete ret.__v
+      delete ret.userId
+      delete ret.createdAt
+      delete ret.updatedAt
+    },
+  },
 })
 export class CheckInRecord {
   @Prop({ required: true, ref: 'User' })

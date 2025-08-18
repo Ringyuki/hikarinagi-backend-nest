@@ -14,22 +14,14 @@ import {
 import { UserService } from '../services/user.service'
 import { VerificationForSignupDto, CreateUserDto, LoginUserDto, RefreshTokenDto } from '../dto/user'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
-import { RolesGuard } from '../../auth/guards/roles.guard'
 import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface'
 import { HikariUserGroup } from '../../auth/enums/hikari-user-group.enum'
 import { Roles } from '../../auth/decorators/roles.decorator'
-import { VerificationService } from '../../email/services/verification.service'
 import { UpdateUserEmailDto } from '../dto/user/update-user-email.dto'
-import { UserCheckInService } from '../services/check-in/user-check-in.service'
-import { Types } from 'mongoose'
 
 @Controller('user')
 export class UserController {
-  constructor(
-    private readonly userService: UserService,
-    private readonly verificationService: VerificationService,
-    private readonly userCheckInService: UserCheckInService,
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
   @Post('verification-for-signup')
   async verificationForSignup(@Body() verificationForSignupDto: VerificationForSignupDto) {
@@ -58,29 +50,6 @@ export class UserController {
     }
   }
 
-  @Post('check-in')
-  @UseGuards(JwtAuthGuard)
-  async checkIn(@Req() req: RequestWithUser) {
-    await this.userCheckInService.checkIn({
-      userId: new Types.ObjectId(req.user._id),
-      isMakeUp: false,
-    })
-    return {
-      message: 'check in success',
-    }
-  }
-
-  @Get('check-in/status')
-  @UseGuards(JwtAuthGuard)
-  async checkInStatus(@Req() req: RequestWithUser) {
-    const status = await this.userCheckInService.checkIsCheckIn(new Types.ObjectId(req.user._id))
-    return {
-      data: {
-        isCheckIn: status,
-      },
-    }
-  }
-
   @Post('refresh-token')
   async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     const result = await this.userService.refreshToken(refreshTokenDto)
@@ -99,8 +68,7 @@ export class UserController {
     }
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(HikariUserGroup.USER)
+  @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(@Request() req: RequestWithUser) {
     const user = await this.userService.getProfile(req.user._id)
@@ -119,6 +87,7 @@ export class UserController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('change-email/request')
   async requestUpdateEmail(@Req() req: RequestWithUser) {
     const { uuid } = await this.userService.requestUpdateEmail(req)
@@ -130,6 +99,7 @@ export class UserController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('change-email/update')
   async updateEmail(@Req() req: RequestWithUser, @Body() updateUserEmailDto: UpdateUserEmailDto) {
     await this.userService.updateEmail(req, updateUserEmailDto)

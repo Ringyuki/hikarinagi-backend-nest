@@ -277,7 +277,7 @@ export class UserService {
       ...user.toJSON({
         includeEmail: true,
         includeStatus: true,
-        notInclude_id: true,
+        notInclude_id: false,
       }),
       userSetting: userSetting.toJSON({ notInclude_id: true }),
     } as unknown as UserDocument & { userSetting: UserSettingDocument }

@@ -11,6 +11,7 @@ import { UserCheckInService } from './services/check-in/user-check-in.service'
 import { CheckInRecord, CheckInRecordSchema } from './schemas/check-in/check-in-record.schema'
 import { HikariPointsRecord, HikariPointsRecordSchema } from './schemas/hikari-point-record.schema'
 import { HikariPointService } from './services/hikari-point.service'
+import { UserCheckInController } from './controllers/check-in/user-check-in.controller'
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { HikariPointService } from './services/hikari-point.service'
     ]),
     EmailModule,
   ],
-  controllers: [UserController, UserSearchController],
+  controllers: [UserController, UserSearchController, UserCheckInController],
   providers: [UserService, UserSearchService, UserCheckInService, HikariPointService],
   exports: [UserService],
 })

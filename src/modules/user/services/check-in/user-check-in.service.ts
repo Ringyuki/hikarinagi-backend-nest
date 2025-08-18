@@ -75,6 +75,19 @@ export class UserCheckInService {
     return false
   }
 
+  async getCheckInRecord(userId: Types.ObjectId) {
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+    const records = await this.checkInRecordModel.find({
+      userId,
+      date: { $gte: monthStart, $lte: monthEnd },
+    })
+
+    return records
+  }
+
   private async updateUserCheckInStreak(userId: Types.ObjectId) {
     const user = await this.userModel.findById(userId)
     if (!user) {
