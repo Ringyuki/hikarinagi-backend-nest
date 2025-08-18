@@ -27,9 +27,11 @@ export class UserCheckInController {
   @UseGuards(JwtAuthGuard)
   async checkInStatus(@Req() req: RequestWithUser) {
     const status = await this.userCheckInService.checkIsCheckIn(new Types.ObjectId(req.user._id))
+    const streak = await this.userCheckInService.getCheckInStreak(new Types.ObjectId(req.user._id))
     return {
       data: {
         isCheckIn: status,
+        streak,
       },
     }
   }

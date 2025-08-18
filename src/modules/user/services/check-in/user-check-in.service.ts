@@ -72,7 +72,17 @@ export class UserCheckInService {
       await this.cacheManager.set(key, true, this.getTtlRemaining())
       return true
     }
+
     return false
+  }
+
+  async getCheckInStreak(userId: Types.ObjectId) {
+    const user = await this.userModel.findById(userId)
+    if (!user) {
+      throw new NotFoundException('User not found')
+    }
+
+    return user.checkInStreak || 0
   }
 
   async getCheckInRecord(userId: Types.ObjectId) {
