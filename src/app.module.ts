@@ -25,6 +25,7 @@ import { NSFWFilterInterceptor } from './common/interceptors/nsfw-filter.interce
 import { CommentModule } from './modules/comment/comment.module'
 import { CreatorCenterModule } from './modules/creator-center/creator-center.module'
 import { VersionService } from './common/services/version.service'
+import { SearchModule } from './modules/search/search.module'
 
 @Module({
   imports: [
@@ -112,6 +113,7 @@ import { VersionService } from './common/services/version.service'
     LightNovelModule,
     CommentModule,
     CreatorCenterModule,
+    SearchModule,
   ],
   controllers: [],
   providers: [
