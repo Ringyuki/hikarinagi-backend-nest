@@ -72,6 +72,9 @@ export class LightNovelVolumeService {
     if (!volume) {
       throw new NotFoundException('Volume not found')
     }
+    if (!volume.seriesId) {
+      throw new NotFoundException('Volume series not found')
+    }
 
     const seriesQuery: any = {
       seriesId: volume.seriesId._id,
