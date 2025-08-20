@@ -13,18 +13,18 @@ export class SearchController {
 
   @Get()
   async search(@Query() searchDto: SearchDto) {
-    // const { keyword, type, page, limit, relative_match } = searchDto
-    // const cacheKey = `${keyword}-${type}-${page}-${limit}-${relative_match}`
-    // const cachedResult = await this.cacheManager.get(cacheKey)
-    // if (cachedResult) {
-    //   return {
-    //     data: cachedResult,
-    //     cached: true,
-    //   }
-    // }
+    const { keyword, type, page, limit, relative_match } = searchDto
+    const cacheKey = `${keyword}-${type}-${page}-${limit}-${relative_match}`
+    const cachedResult = await this.cacheManager.get(cacheKey)
+    if (cachedResult) {
+      return {
+        data: cachedResult,
+        cached: true,
+      }
+    }
 
     const result = await this.searchService.search(searchDto)
-    // await this.cacheManager.set(cacheKey, result, 60 * 60 * 1000)
+    await this.cacheManager.set(cacheKey, result, 60 * 60 * 1000)
     return {
       data: result,
     }
