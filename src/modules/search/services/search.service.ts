@@ -751,17 +751,21 @@ export class SearchService {
     page: number,
     limit: number,
   ): Promise<PaginatedResult<any>> {
+    const query: FilterQuery<ProducerDocument> = {
+      $or: [
+        { name: { $regex: keyword, $options: 'i' } },
+        { aliases: { $elemMatch: { $regex: keyword, $options: 'i' } } },
+      ],
+    }
+
     const producers = await this.producerModel
-      .find({
-        $or: [
-          { name: { $regex: keyword, $options: 'i' } },
-          { aliases: { $elemMatch: { $regex: keyword, $options: 'i' } } },
-        ],
-      })
+      .find(query)
       .select('_id id name logo aliases country')
       .limit(limit)
       .skip((page - 1) * limit)
       .lean()
+
+    const total = await this.producerModel.countDocuments(query)
 
     const formattedProducers = producers.map(p => ({
       _id: p._id,
@@ -774,10 +778,10 @@ export class SearchService {
     return {
       items: formattedProducers,
       meta: {
-        totalItems: producers.length,
+        totalItems: total,
         itemCount: producers.length,
         itemsPerPage: limit,
-        totalPages: Math.ceil(producers.length / limit),
+        totalPages: Math.ceil(total / limit),
         currentPage: page,
       },
     }
@@ -788,18 +792,22 @@ export class SearchService {
     page: number,
     limit: number,
   ): Promise<PaginatedResult<any>> {
+    const query: FilterQuery<PersonDocument> = {
+      $or: [
+        { name: { $regex: keyword, $options: 'i' } },
+        { transName: { $regex: keyword, $options: 'i' } },
+        { aliases: { $elemMatch: { $regex: keyword, $options: 'i' } } },
+      ],
+    }
+
     const persons = await this.personModel
-      .find({
-        $or: [
-          { name: { $regex: keyword, $options: 'i' } },
-          { transName: { $regex: keyword, $options: 'i' } },
-          { aliases: { $elemMatch: { $regex: keyword, $options: 'i' } } },
-        ],
-      })
+      .find(query)
       .select('_id id name transName aliases image')
       .limit(limit)
       .skip((page - 1) * limit)
       .lean()
+
+    const total = await this.personModel.countDocuments(query)
 
     const formattedPersons = persons.map(p => ({
       _id: p._id,
@@ -813,10 +821,10 @@ export class SearchService {
     return {
       items: formattedPersons,
       meta: {
-        totalItems: persons.length,
+        totalItems: total,
         itemCount: persons.length,
         itemsPerPage: limit,
-        totalPages: Math.ceil(persons.length / limit),
+        totalPages: Math.ceil(total / limit),
         currentPage: page,
       },
     }
@@ -827,18 +835,21 @@ export class SearchService {
     page: number,
     limit: number,
   ): Promise<PaginatedResult<any>> {
+    const query: FilterQuery<CharacterDocument> = {
+      $or: [
+        { name: { $regex: keyword, $options: 'i' } },
+        { transName: { $regex: keyword, $options: 'i' } },
+        { aliases: { $elemMatch: { $regex: keyword, $options: 'i' } } },
+      ],
+    }
     const characters = await this.characterModel
-      .find({
-        $or: [
-          { name: { $regex: keyword, $options: 'i' } },
-          { transName: { $regex: keyword, $options: 'i' } },
-          { aliases: { $elemMatch: { $regex: keyword, $options: 'i' } } },
-        ],
-      })
+      .find(query)
       .select('_id id name transName aliases image')
       .limit(limit)
       .skip((page - 1) * limit)
       .lean()
+
+    const total = await this.characterModel.countDocuments(query)
 
     const formattedCharacters = characters.map(c => ({
       _id: c._id,
@@ -852,10 +863,10 @@ export class SearchService {
     return {
       items: formattedCharacters,
       meta: {
-        totalItems: characters.length,
+        totalItems: total,
         itemCount: characters.length,
         itemsPerPage: limit,
-        totalPages: Math.ceil(characters.length / limit),
+        totalPages: Math.ceil(total / limit),
         currentPage: page,
       },
     }
