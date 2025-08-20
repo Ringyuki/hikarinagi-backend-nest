@@ -69,8 +69,8 @@ export class CreateLightNovelVolumeDto {
   volumeType: VolumeType
 
   @IsString()
-  @IsNotEmpty()
-  isbn: string
+  @IsOptional()
+  isbn?: string
 
   @IsNumber()
   @IsOptional()
