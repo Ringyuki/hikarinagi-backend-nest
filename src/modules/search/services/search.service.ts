@@ -15,7 +15,7 @@ import {
   CharacterSearchResult,
   ProducerSearchResult,
   TagSearchResult,
-} from '../types/resluts'
+} from '../types/results'
 import { MATCH_SCORES_WEIGHT } from '../constants/MATCH_SCORES_WEIGHT'
 import { PaginatedResult } from '../../../common/interfaces/paginated-result.interface'
 
