@@ -433,19 +433,19 @@ export class SearchService {
       }
     }
 
-    const directGalgames = await this.galgameModel
-      .find(galgameQuery)
-      .select('_id galId originTitle transTitle nsfw cover producers staffs characters tags')
-      .populate('producers.producer', 'id name aliases')
-      .populate('staffs.person', 'name transName')
-      .populate('characters.character', 'name transName')
-      .populate('tags.tag', 'name')
-      .where('status')
-      .equals('published')
-      .lean()
-
     let relatedGalgames = []
     if (relative_match) {
+      const directGalgames = await this.galgameModel
+        .find(galgameQuery)
+        .select('_id galId originTitle transTitle nsfw cover producers staffs characters tags')
+        .populate('producers.producer', 'id name aliases')
+        .populate('staffs.person', 'name transName')
+        .populate('characters.character', 'name transName')
+        .populate('tags.tag', 'name')
+        .where('status')
+        .equals('published')
+        .lean()
+
       const { producers, persons, characters, tags } = await this.getRelatedEntities(keyword)
 
       if (producers.length || persons.length || characters.length || tags.length) {
@@ -539,6 +539,19 @@ export class SearchService {
         },
       }
     } else {
+      const directGalgames = await this.galgameModel
+        .find(galgameQuery)
+        .select('_id galId originTitle transTitle nsfw cover producers staffs characters tags')
+        .populate('producers.producer', 'id name aliases')
+        .populate('staffs.person', 'name transName')
+        .populate('characters.character', 'name transName')
+        .populate('tags.tag', 'name')
+        .where('status')
+        .equals('published')
+        .limit(limit)
+        .skip((page - 1) * limit)
+        .lean()
+
       const directGalgamesCount = await this.galgameModel.countDocuments(galgameQuery)
 
       const formattedGalgames = directGalgames.map(g => ({
@@ -610,21 +623,21 @@ export class SearchService {
       }
     }
 
-    const directNovels = await this.lightNovelModel
-      .find(novelQuery)
-      .select(
-        '_id novelId name name_cn otherNames cover author publishers illustrators tags characters nsfw',
-      )
-      .populate('author', 'id name transName')
-      .populate('publishers.publisher', 'name aliases')
-      .populate('illustrators.illustrator', 'name transName')
-      .populate('characters.character', 'name transName')
-      .where('status')
-      .equals('published')
-      .lean()
-
     let relatedNovels = []
     if (relative_match) {
+      const directNovels = await this.lightNovelModel
+        .find(novelQuery)
+        .select(
+          '_id novelId name name_cn otherNames cover author publishers illustrators tags characters nsfw',
+        )
+        .populate('author', 'id name transName')
+        .populate('publishers.publisher', 'name aliases')
+        .populate('illustrators.illustrator', 'name transName')
+        .populate('characters.character', 'name transName')
+        .where('status')
+        .equals('published')
+        .lean()
+
       const { producers, persons, characters, tags } = await this.getRelatedEntities(keyword)
 
       if (producers.length || persons.length || characters.length || tags.length) {
@@ -720,6 +733,21 @@ export class SearchService {
         }
       }
     } else {
+      const directNovels = await this.lightNovelModel
+        .find(novelQuery)
+        .select(
+          '_id novelId name name_cn otherNames cover author publishers illustrators tags characters nsfw',
+        )
+        .populate('author', 'id name transName')
+        .populate('publishers.publisher', 'name aliases')
+        .populate('illustrators.illustrator', 'name transName')
+        .populate('characters.character', 'name transName')
+        .where('status')
+        .equals('published')
+        .limit(limit)
+        .skip((page - 1) * limit)
+        .lean()
+
       const directNovelsCount = await this.lightNovelModel.countDocuments(novelQuery)
 
       const formattedNovels = directNovels.map(n => ({

@@ -1,13 +1,4 @@
-import {
-  IsNotEmpty,
-  IsString,
-  IsNumber,
-  IsEnum,
-  IsOptional,
-  IsBoolean,
-  Min,
-  Max,
-} from 'class-validator'
+import { IsNotEmpty, IsString, IsNumber, IsEnum, IsBoolean, Min, Max } from 'class-validator'
 import { SearchType } from '../types/SearchType.types'
 import { Transform, Type } from 'class-transformer'
 
@@ -35,7 +26,7 @@ export class SearchDto {
   limit: number
 
   @IsBoolean()
-  @IsOptional()
+  @IsNotEmpty()
   @Transform(({ value }) =>
     value === undefined
       ? false

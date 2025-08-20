@@ -4,6 +4,6 @@ export interface PersonSearchResult {
   _id: Types.ObjectId
   name: string
   transName: string
-  alias: string[]
+  aliases: string[]
   image: string
 }

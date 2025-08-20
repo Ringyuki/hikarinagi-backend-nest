@@ -4,6 +4,6 @@ export interface CharacterSearchResult {
   _id: Types.ObjectId
   name: string
   transName: string
-  alias: string[]
+  aliases: string[]
   image: string
 }
