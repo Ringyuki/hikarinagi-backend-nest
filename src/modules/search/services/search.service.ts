@@ -665,72 +665,72 @@ export class SearchService {
           .where('status')
           .equals('published')
           .lean()
+      }
 
-        const allNovels = [...directNovels, ...relatedNovels]
+      const allNovels = [...directNovels, ...relatedNovels]
 
-        const scoredNovels = allNovels.map(novel => ({
-          ...novel,
-          matchType: directNovels.some(dn => dn._id.toString() === novel._id.toString())
-            ? 'direct'
-            : 'related',
-          matchInfo: this.getMatchInfo(novel, { producers, persons, characters, tags }),
-          score:
-            novel.matchType === 'direct'
-              ? this.calculateScore(
-                  novel,
-                  keyword,
-                  tokens,
-                  {
-                    producers,
-                    persons,
-                    characters,
-                    tags,
-                  },
-                  'novel',
-                ) + 100 // 直接匹配加权
-              : this.calculateScore(
-                  novel,
-                  keyword,
-                  tokens,
-                  {
-                    producers,
-                    persons,
-                    characters,
-                    tags,
-                  },
-                  'novel',
-                ),
-        }))
+      const scoredNovels = allNovels.map(novel => ({
+        ...novel,
+        matchType: directNovels.some(dn => dn._id.toString() === novel._id.toString())
+          ? 'direct'
+          : 'related',
+        matchInfo: this.getMatchInfo(novel, { producers, persons, characters, tags }),
+        score:
+          novel.matchType === 'direct'
+            ? this.calculateScore(
+                novel,
+                keyword,
+                tokens,
+                {
+                  producers,
+                  persons,
+                  characters,
+                  tags,
+                },
+                'novel',
+              ) + 100 // 直接匹配加权
+            : this.calculateScore(
+                novel,
+                keyword,
+                tokens,
+                {
+                  producers,
+                  persons,
+                  characters,
+                  tags,
+                },
+                'novel',
+              ),
+      }))
 
-        scoredNovels.sort((a, b) => b.score - a.score)
-        const total = scoredNovels.length
-        const totalPages = Math.ceil(total / limit)
-        const paginatedNovels = scoredNovels.slice((page - 1) * limit, page * limit)
+      scoredNovels.sort((a, b) => b.score - a.score)
+      const total = scoredNovels.length
+      const totalPages = Math.ceil(total / limit)
+      const paginatedNovels = scoredNovels.slice((page - 1) * limit, page * limit)
 
-        const formattedNovels = paginatedNovels.map(n => ({
-          _id: n._id,
-          novelId: n.novelId,
-          name: n.name,
-          name_cn: n.name_cn,
-          otherNames: n.otherNames,
-          cover: n.cover,
-          author: n.author,
-          nsfw: n.nsfw,
-          matchType: n.matchType,
-          matchInfo: n.matchInfo,
-          score: n.score,
-        }))
+      const formattedNovels = paginatedNovels.map(n => ({
+        _id: n._id,
+        novelId: n.novelId,
+        name: n.name,
+        name_cn: n.name_cn,
+        otherNames: n.otherNames,
+        cover: n.cover,
+        author: n.author,
+        nsfw: n.nsfw,
+        matchType: n.matchType,
+        matchInfo: n.matchInfo,
+        score: n.score,
+      }))
 
-        return {
-          items: formattedNovels,
-          meta: {
-            totalItems: total,
-            itemCount: paginatedNovels.length,
-            itemsPerPage: limit,
-            totalPages,
-            currentPage: page,
-          },
-        }
+      return {
+        items: formattedNovels,
+        meta: {
+          totalItems: total,
+          itemCount: paginatedNovels.length,
+          itemsPerPage: limit,
+          totalPages,
+          currentPage: page,
+        },
       }
     } else {
       const directNovels = await this.lightNovelModel
