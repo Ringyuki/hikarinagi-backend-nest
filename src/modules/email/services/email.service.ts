@@ -18,7 +18,6 @@ export class EmailService {
       senderAddress: this.configService.get('email.emailSenderAddress'),
       senderName: this.configService.get('email.emailSenderName'),
     }
-    this.logger.log(this.emailConfig)
   }
 
   async sendEmail(sendEmailDto: SendEmailDto): Promise<boolean> {
@@ -50,10 +49,7 @@ export class EmailService {
     } else if (this.emailConfig.provider === 'postal') {
       const emailData = {
         subject,
-        from: from || this.emailConfig.senderAddress,
-        sender: this.emailConfig.senderName,
-        fromName: this.emailConfig.senderName,
-        senderName: this.emailConfig.senderName,
+        from: `"${this.emailConfig.senderName}" <${from || this.emailConfig.senderAddress}>`,
         to: isArray(to) ? to : [to],
         html_body: bodyHtml,
       }
