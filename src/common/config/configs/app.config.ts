@@ -5,8 +5,9 @@ export default () => ({
     limit: parseInt(process.env.THROTTLE_LIMIT || '10', 10),
   },
   email: {
-    elasticEmailApiKey: process.env.ELASTIC_EMAIL_API_KEY,
-    elasticEmailEndPoint: process.env.ELASTIC_EMAIL_ENDPOINT,
+    emailProvider: process.env.EMAIL_PROVIDER || 'elastic',
+    emailApiKey: process.env.EMAIL_PROVIDER_API_KEY,
+    emailEndPoint: process.env.EMAIL_PROVIDER_ENDPOINT,
     emailSenderAddress: process.env.EMAIL_SENDER_ADDRESS,
     emailSenderName: process.env.EMAIL_SENDER_NAME,
   },

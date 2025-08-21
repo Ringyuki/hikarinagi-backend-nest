@@ -86,13 +86,20 @@ export class EnvironmentValidator {
 
     // email
     {
-      key: 'ELASTIC_EMAIL_API_KEY',
+      key: 'EMAIL_PROVIDER',
+      required: false,
+      type: 'string',
+      description: '邮件提供商',
+      defaultValue: 'elastic',
+    },
+    {
+      key: 'EMAIL_PROVIDER_API_KEY',
       required: false,
       type: 'string',
       description: 'ElasticEmail API 密钥',
     },
     {
-      key: 'ELASTIC_EMAIL_ENDPOINT',
+      key: 'EMAIL_PROVIDER_ENDPOINT',
       required: false,
       type: 'string',
       description: 'ElasticEmail API 端点',
@@ -237,7 +244,11 @@ export class EnvironmentValidator {
     }
 
     // check email
-    const emailKeys = ['ELASTIC_EMAIL_API_KEY', 'EMAIL_SENDER_ADDRESS']
+    const emailProvider = process.env.EMAIL_PROVIDER
+    if (emailProvider !== 'elastic' && emailProvider !== 'postal') {
+      errors.push('EMAIL_PROVIDER: 必须是 elastic 或 postal')
+    }
+    const emailKeys = ['EMAIL_PROVIDER_API_KEY', 'EMAIL_SENDER_ADDRESS']
     const hasAnyEmail = emailKeys.some(key => process.env[key])
     const hasAllEmail = emailKeys.every(key => process.env[key])
     if (hasAnyEmail && !hasAllEmail) {

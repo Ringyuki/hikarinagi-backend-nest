@@ -27,8 +27,9 @@ export interface AppConfig {
     limit: number
   }
   email: {
-    elasticEmailApiKey?: string
-    elasticEmailEndPoint?: string
+    emailProvider?: 'elastic' | 'postal'
+    emailApiKey?: string
+    emailEndPoint?: string
     emailSenderAddress?: string
     emailSenderName?: string
   }
@@ -86,8 +87,9 @@ export type ConfigPath =
   | 'throttle.ttl'
   | 'throttle.limit'
   // 邮件配置
-  | 'email.elasticEmailApiKey'
-  | 'email.elasticEmailEndPoint'
+  | 'email.emailProvider'
+  | 'email.emailApiKey'
+  | 'email.emailEndPoint'
   | 'email.emailSenderAddress'
   | 'email.emailSenderName'
   // 注册配置
@@ -138,42 +140,44 @@ export type ConfigPathValue<T extends ConfigPath> = T extends 'jwt.secret'
                         ? number
                         : T extends 'throttle.limit'
                           ? number
-                          : T extends 'email.elasticEmailApiKey'
-                            ? string | undefined
-                            : T extends 'email.elasticEmailEndPoint'
+                          : T extends 'email.emailProvider'
+                            ? 'elastic' | 'postal' | undefined
+                            : T extends 'email.emailApiKey'
                               ? string | undefined
-                              : T extends 'email.emailSenderAddress'
+                              : T extends 'email.emailEndPoint'
                                 ? string | undefined
-                                : T extends 'email.emailSenderName'
+                                : T extends 'email.emailSenderAddress'
                                   ? string | undefined
-                                  : T extends 'allowRegister'
-                                    ? boolean
-                                    : T extends 'reader.readerSignatureSecret'
-                                      ? string | undefined
-                                      : T extends 'galDownload.downloadSignatureSecret'
+                                  : T extends 'email.emailSenderName'
+                                    ? string | undefined
+                                    : T extends 'allowRegister'
+                                      ? boolean
+                                      : T extends 'reader.readerSignatureSecret'
                                         ? string | undefined
-                                        : T extends 'r2.r2Endpoint'
+                                        : T extends 'galDownload.downloadSignatureSecret'
                                           ? string | undefined
-                                          : T extends 'r2.novel.r2LightNovelAccessKey'
+                                          : T extends 'r2.r2Endpoint'
                                             ? string | undefined
-                                            : T extends 'r2.novel.r2LightNovelSecretKey'
+                                            : T extends 'r2.novel.r2LightNovelAccessKey'
                                               ? string | undefined
-                                              : T extends 'r2.novel.r2LightNovelBucket'
+                                              : T extends 'r2.novel.r2LightNovelSecretKey'
                                                 ? string | undefined
-                                                : T extends 'r2.images.r2ImageAccessKey'
+                                                : T extends 'r2.novel.r2LightNovelBucket'
                                                   ? string | undefined
-                                                  : T extends 'r2.images.r2ImageSecretKey'
+                                                  : T extends 'r2.images.r2ImageAccessKey'
                                                     ? string | undefined
-                                                    : T extends 'r2.images.r2ImageBucket'
+                                                    : T extends 'r2.images.r2ImageSecretKey'
                                                       ? string | undefined
-                                                      : T extends 'bangumi.clientId'
+                                                      : T extends 'r2.images.r2ImageBucket'
                                                         ? string | undefined
-                                                        : T extends 'bangumi.clientSecret'
+                                                        : T extends 'bangumi.clientId'
                                                           ? string | undefined
-                                                          : T extends 'version.major'
-                                                            ? number
-                                                            : T extends 'version.minor'
+                                                          : T extends 'bangumi.clientSecret'
+                                                            ? string | undefined
+                                                            : T extends 'version.major'
                                                               ? number
-                                                              : T extends 'version.suffix'
-                                                                ? string
-                                                                : never
+                                                              : T extends 'version.minor'
+                                                                ? number
+                                                                : T extends 'version.suffix'
+                                                                  ? string
+                                                                  : never
