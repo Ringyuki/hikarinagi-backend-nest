@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer'
+import { Transform, Type } from 'class-transformer'
 import { Types } from 'mongoose'
 import {
   IsString,
@@ -56,6 +56,7 @@ export class UpdateLightNovelVolumeDto {
   @IsOptional()
   volumeType?: VolumeType
 
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @IsOptional()
   volumeNumber?: number

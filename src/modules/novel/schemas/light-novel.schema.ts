@@ -134,11 +134,6 @@ export class LightNovelCreator {
             name: c.character?.name || '',
             image: c.character?.image || '',
             role: c.role || '',
-            act:
-              c.character?.act?.map(act => ({
-                person: null,
-                work: act.work,
-              })) || [],
           }))
         }
         if (ret.tags && Array.isArray(ret.tags)) {
