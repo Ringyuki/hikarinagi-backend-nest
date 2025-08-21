@@ -21,6 +21,48 @@ export class LightNovelVolumeManagementService {
     private readonly updateRequestService: UpdateRequestService,
   ) {}
 
+  async getLightNovelVolume(volumeId: number) {
+    const volume = await this.lightNovelVolumeModel
+      .findOne({ volumeId })
+      .select(
+        'bangumiBookId seriesId volumeId cover name name_cn summary summary_cn volumeType volumeNumber volumeExtraName publicationDate isbn price pages status relation hasEpub createdAt updatedAt creator -_id',
+      )
+      .populate({ path: 'seriesId', select: 'novelId _id' })
+      .lean()
+
+    if (!volume) {
+      throw new NotFoundException('Volume not found')
+    }
+
+    const result: any = { ...volume }
+    result.novelId = (volume.seriesId as any).novelId
+    result.seriesId = (volume.seriesId as any)._id
+
+    if (!result.volumeExtraName) {
+      result.volumeExtraName = ''
+    }
+    if (!result.volumeType) {
+      result.volumeType = 'main'
+    }
+    if (!result.volumeNumber) {
+      result.volumeNumber = ''
+    }
+    if (!result.price) {
+      result.price = {
+        amount: 0,
+        currency: 'JPY',
+      }
+    }
+    if (!result.pages) {
+      result.pages = 0
+    }
+    if (!result.publicationDate) {
+      result.publicationDate = '2077-01-01'
+    }
+
+    return result
+  }
+
   async updateLightNovelVolume(
     volumeId: number,
     data: UpdateLightNovelVolumeDto,
