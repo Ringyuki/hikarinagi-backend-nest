@@ -38,8 +38,9 @@ describe('EmailService', () => {
     // Setup default config values
     mockConfigService.get.mockImplementation((key: string) => {
       const config = {
-        'email.elasticEmailApiKey': 'test-api-key',
-        'email.elasticEmailEndPoint': 'https://api.elasticemail.com/v2/email/send',
+        'email.emailProvider': 'elastic',
+        'email.emailApiKey': 'test-api-key',
+        'email.emailEndPoint': 'https://api.elasticemail.com/v2/email/send',
         'email.emailSenderAddress': 'noreply@hikarinagi.com',
         'email.emailSenderName': 'Hikarinagi',
       }

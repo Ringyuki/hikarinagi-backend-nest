@@ -1,4 +1,5 @@
 export interface EmailConfig {
+  provider: 'elastic' | 'postal'
   apiKey: string
   endPoint: string
   senderAddress: string
