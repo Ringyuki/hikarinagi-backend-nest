@@ -86,6 +86,7 @@ export class UpdateRequestService {
       filteredReceivers = receivers.filter(receiver => !receiver.equals(currentUserId))
     }
 
+    filteredReceivers = [...new Set(filteredReceivers)]
     for (const receiver of filteredReceivers) {
       await this.systemMessageService.sendSystemMessage({
         targetUser: receiver,
