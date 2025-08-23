@@ -7,6 +7,10 @@ import {
   ValidateNested,
   IsIn,
   IsObject,
+  ValidateIf,
+  IsDefined,
+  ArrayNotEmpty,
+  IsNotEmpty,
 } from 'class-validator'
 import { Type } from 'class-transformer'
 
@@ -332,7 +336,7 @@ export class CreateGalgameDto {
   @IsString({ each: true })
   originTitle: string[]
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   originIntro?: string
 
@@ -340,8 +344,9 @@ export class CreateGalgameDto {
   @IsString()
   transIntro?: string
 
-  @IsOptional()
   @IsString()
+  @ValidateIf(o => o.releaseDateTBD !== true)
+  @IsDefined()
   releaseDate?: string
 
   @IsOptional()
@@ -353,11 +358,13 @@ export class CreateGalgameDto {
   releaseDateTBDNote?: string
 
   @IsArray()
+  @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => CreateGalgameProducerDto)
   producers: CreateGalgameProducerDto[]
 
   @IsArray()
+  @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => CreateGalgameTagDto)
   tags: CreateGalgameTagDto[]
@@ -368,6 +375,7 @@ export class CreateGalgameDto {
   staffs: CreateGalgameStaffDto[]
 
   @IsArray()
+  @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => CreateGalgameCharacterDto)
   characters: CreateGalgameCharacterDto[]

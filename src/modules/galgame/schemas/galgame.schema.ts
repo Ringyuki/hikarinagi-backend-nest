@@ -241,7 +241,7 @@ export class Galgame {
   @Prop({ type: Number, required: false, unique: true })
   bangumiGameId: number
 
-  @Prop({ type: String, required: true })
+  @Prop({ type: String })
   cover: string
 
   @Prop({ type: Number, required: false, default: 0 })
