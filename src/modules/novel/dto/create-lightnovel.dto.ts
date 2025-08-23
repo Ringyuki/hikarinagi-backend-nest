@@ -8,6 +8,7 @@ import {
   IsEnum,
   IsBoolean,
   IsObject,
+  ArrayNotEmpty,
 } from 'class-validator'
 import { Type } from 'class-transformer'
 import { Types } from 'mongoose'
@@ -307,18 +308,22 @@ export class CreateLightNovelDto {
   bunko: ProducerDto
 
   @IsArray()
+  @ArrayNotEmpty()
   @Type(() => CreateLightNovelPublisherDto)
   publishers: CreateLightNovelPublisherDto[]
 
   @IsArray()
+  @ArrayNotEmpty()
   @Type(() => CreateLightNovelIllustratorDto)
   illustrators: CreateLightNovelIllustratorDto[]
 
   @IsArray()
+  @ArrayNotEmpty()
   @Type(() => CreateLightNovelTagDto)
   tags: CreateLightNovelTagDto[]
 
   @IsArray()
+  @ArrayNotEmpty()
   @Type(() => CreateLightNovelCharacterDto)
   characters: CreateLightNovelCharacterDto[]
 
