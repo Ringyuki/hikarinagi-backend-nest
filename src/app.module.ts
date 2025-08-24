@@ -26,6 +26,7 @@ import { CommentModule } from './modules/comment/comment.module'
 import { CreatorCenterModule } from './modules/creator-center/creator-center.module'
 import { VersionService } from './common/services/version.service'
 import { SearchModule } from './modules/search/search.module'
+import { SiteModule } from './modules/site/site.module'
 
 @Module({
   imports: [
@@ -114,6 +115,7 @@ import { SearchModule } from './modules/search/search.module'
     CommentModule,
     CreatorCenterModule,
     SearchModule,
+    SiteModule,
   ],
   controllers: [],
   providers: [
