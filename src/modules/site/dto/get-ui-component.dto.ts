@@ -1,5 +1,5 @@
 import { IsOptional, IsNotEmpty, IsEnum, IsString } from 'class-validator'
-import { UIComponentType } from '../types/UIComponentType.types'
+import { UIComponentType } from '../enums/UIComponentType.enum'
 
 export class GetUIComponentDto {
   @IsNotEmpty()

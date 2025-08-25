@@ -12,7 +12,7 @@ import {
   AdvertisementItem,
   AdvertisementSettings,
 } from './components'
-import { UIComponentType } from '../types/UIComponentType.types'
+import { UIComponentType } from '../enums/UIComponentType.enum'
 
 export type UIComponentDocument = UIComponent & Document
 
@@ -128,3 +128,5 @@ UIComponentSchema.discriminator(
   'advertisement',
   SchemaFactory.createForClass(AdvertisementComponent),
 )
+
+UIComponentSchema.index({ type: 1, page: 1, position: 1, section: 1 })

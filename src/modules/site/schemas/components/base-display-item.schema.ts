@@ -2,10 +2,7 @@ import { Prop, Schema } from '@nestjs/mongoose'
 
 @Schema({ _id: false })
 export class BaseDisplayItem {
-  @Prop({
-    type: String,
-    required: true,
-  })
+  @Prop({ type: String })
   title: string
 
   @Prop({ type: String })
