@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { MongooseModule } from '@nestjs/mongoose'
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { CacheModule } from '@nestjs/cache-manager'
 import { ThrottlerGuard, ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler'
 import { redisStore } from 'cache-manager-redis-yet'
@@ -19,13 +20,13 @@ import { BangumiModule } from './modules/bangumi/bangumi.module'
 import { GalgameModule } from './modules/galgame/galgame.module'
 import { LightNovelModule } from './modules/novel/lightnovel.module'
 import { RootAppModule } from './common/modules/app.module'
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { TokenExtractionInterceptor } from './common/interceptors/token-extraction.interceptor'
 import { NSFWFilterInterceptor } from './common/interceptors/nsfw-filter.interceptor'
 import { CommentModule } from './modules/comment/comment.module'
 import { CreatorCenterModule } from './modules/creator-center/creator-center.module'
 import { VersionService } from './common/services/version.service'
 import { SearchModule } from './modules/search/search.module'
+import { SiteModule } from './modules/site/site.module'
 
 @Module({
   imports: [
@@ -114,6 +115,7 @@ import { SearchModule } from './modules/search/search.module'
     CommentModule,
     CreatorCenterModule,
     SearchModule,
+    SiteModule,
   ],
   controllers: [],
   providers: [
